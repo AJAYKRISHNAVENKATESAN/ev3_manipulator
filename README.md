@@ -14,9 +14,15 @@ picks/sorts objects off a conveyor. Used as a git submodule in
 ```bash
 colcon build && source install/setup.bash
 ```
+Work in progress -> to do 
+->Current Tasks
+**Hardware Synchronization**: Establish real-time communication and state synchronization between the virtual Gazebo model and the physical LEGO EV3 manipulator.
+**CI/CD & Deployment**: Containerize the ROS 2 environment into a unified `Dockerfile` for seamless deployment across laboratory workstations.
+**MoveIt 2 Integration**: 
 
 > Note: the MoveIt config currently targets the older `manipulator_ev3_brick`
 > URDF; re-pointing it to this arm's URDF is a follow-up.
+
 
 
 https://github.com/user-attachments/assets/9ebfe38d-4cc8-4826-ae7d-aa0d116ae9a8
