@@ -17,3 +17,6 @@ colcon build && source install/setup.bash
 
 > Note: the MoveIt config currently targets the older `manipulator_ev3_brick`
 > URDF; re-pointing it to this arm's URDF is a follow-up.
+
+
+https://github.com/user-attachments/assets/9ebfe38d-4cc8-4826-ae7d-aa0d116ae9a8
