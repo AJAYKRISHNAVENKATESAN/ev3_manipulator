@@ -1,0 +1,6 @@
+# Default initial positions for manipulator_ev3_brick's ros2_control fake system
+
+initial_positions:
+  arm_1_base_link_joint: 0
+  left_arm_linkage_arm_2_joint: 0
+  left_gear_arm_3_joint: 0

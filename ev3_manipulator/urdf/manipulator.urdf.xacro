@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<robot name="ev3_manipulator" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <xacro:include filename="$(find ev3_manipulator)/urdf/manipulator_materials.xacro" />
+    <xacro:include filename="$(find ev3_manipulator)/urdf/manipulator_control.xacro" />
+    <xacro:include filename="$(find ev3_manipulator)/urdf/manipulator_gazebo.xacro" />
+    <xacro:include filename="$(find ev3_manipulator)/urdf/manipulator_urdf.xacro" />
+
+</robot>

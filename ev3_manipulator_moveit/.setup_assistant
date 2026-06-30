@@ -1,0 +1,25 @@
+moveit_setup_assistant_config:
+  urdf:
+    package: manipulator_ev3_brick
+    relative_path: urdf/manipulator.urdf.xacro
+  srdf:
+    relative_path: config/manipulator_ev3_brick.srdf
+  package_settings:
+    author_name: AJAYKRISHNA VENKATESAN
+    author_email: ajaykrishna.msn@gmail.com
+    generated_timestamp: 1778879830
+  control_xacro:
+    command:
+      - position
+    state:
+      - position
+      - velocity
+  modified_urdf:
+    xacros:
+      - control_xacro
+  control_xacro:
+    command:
+      - position
+    state:
+      - position
+      - velocity
