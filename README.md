@@ -18,7 +18,7 @@ Work in progress -> to do
 ->Current Tasks
 **Hardware Synchronization**: Establish real-time communication and state synchronization between the virtual Gazebo model and the physical LEGO EV3 manipulator.
 **CI/CD & Deployment**: Containerize the ROS 2 environment into a unified `Dockerfile` for seamless deployment across laboratory workstations.
-**MoveIt 2 Integration**: 
+**Explore MoveIt 2 Integration in the future**: 
 
 > Note: the MoveIt config currently targets the older `manipulator_ev3_brick`
 > URDF; re-pointing it to this arm's URDF is a follow-up.
