@@ -16,6 +16,9 @@ services:
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=all
+      # drive GLX on the NVIDIA GPU (Xorg runs on the RTX here)
+      - __NV_PRIME_RENDER_OFFLOAD=1
+      - __GLX_VENDOR_LIBRARY_NAME=nvidia
 
     volumes:
       # this repo, mounted as a package in the colcon workspace
@@ -26,6 +29,10 @@ services:
       - ev3_manipulator_build:/workspace/build
       - ev3_manipulator_install:/workspace/install
       - ev3_manipulator_log:/workspace/log
+
+    # DRM render nodes for hardware-accelerated GUI (RViz/Gazebo)
+    devices:
+      - /dev/dri:/dev/dri
 
     network_mode: host
     stdin_open: true
