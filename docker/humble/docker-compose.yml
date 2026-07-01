@@ -1,0 +1,54 @@
+# ev3_manipulator dev container — ROS 2 Humble + Gazebo Fortress (Ignition).
+# Native Ubuntu host with an NVIDIA GPU. GUI (RViz/Gazebo) via the host X server;
+# GPU via nvidia-container-toolkit. Runs the original Humble/Fortress manipulator sim.
+# On the host once per session, allow the container to use your display:
+#   xhost +local:root
+services:
+  ev3-manipulator-humble:
+    build:
+      context: ../..
+      dockerfile: docker/humble/Dockerfile
+    container_name: ev3-manipulator-humble
+    hostname: ev3-manipulator-humble
+
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      # drive GLX on the NVIDIA GPU (Xorg runs on the RTX here)
+      - __NV_PRIME_RENDER_OFFLOAD=1
+      - __GLX_VENDOR_LIBRARY_NAME=nvidia
+
+    volumes:
+      # this repo, mounted as a package in the colcon workspace
+      - ../..:/workspace/src/ev3_manipulator
+      # native X11 socket for GUI apps
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # persistent build artifacts (separate from the Jazzy env's volumes)
+      - ev3_manipulator_humble_build:/workspace/build
+      - ev3_manipulator_humble_install:/workspace/install
+      - ev3_manipulator_humble_log:/workspace/log
+
+    # DRM render nodes for hardware-accelerated GUI (RViz/Gazebo)
+    devices:
+      - /dev/dri:/dev/dri
+
+    network_mode: host
+    stdin_open: true
+    tty: true
+
+    # NVIDIA GPU (requires nvidia-container-toolkit on the host)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu, graphics, display, compute, utility]
+
+volumes:
+  ev3_manipulator_humble_build:
+  ev3_manipulator_humble_install:
+  ev3_manipulator_humble_log:
