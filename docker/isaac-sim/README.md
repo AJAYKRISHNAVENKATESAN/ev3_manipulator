@@ -14,7 +14,7 @@ client** — good for a laptop GPU and for remote access.
 > ⚠️ **Blackwell (RTX 50-series) + driver 595.x:** the RTX renderer
 > (`libcarb.scenerenderer-rtx`) segfaults on startup **even in headless mode** —
 > headless does *not* dodge it. You must downgrade the host driver to the **580.xx**
-> branch first. See **[`DRIVER_DOWNGRADE.md`](DRIVER_DOWNGRADE.md)**.
+> branch first. See **[`DRIVER_DOWNGRADE.md`](https://github.com/PavanSandaka/project-drishti/blob/main/docker/isaac-sim/DRIVER_DOWNGRADE.md)**.
 
 ## One-time host prereqs
 1. **NVIDIA driver** present (`nvidia-smi` works) — RTX GPU with RT cores required.
@@ -62,7 +62,7 @@ docker compose -f docker/isaac-sim/docker-compose.yml run --rm isaac-sim bash
   delete to reclaim space; next launch just rebuilds it.
 - **Driver 595.x on Blackwell crashes the RTX renderer even headless** — downgrade to
   the 580.xx branch is required, not optional. Full steps in
-  [`DRIVER_DOWNGRADE.md`](DRIVER_DOWNGRADE.md).
+  [`DRIVER_DOWNGRADE.md`](https://github.com/PavanSandaka/project-drishti/blob/main/docker/isaac-sim/DRIVER_DOWNGRADE.md).
 
 ## Next step (why this is in project-drishti)
 Once streaming works, enable the **ROS 2 bridge** (`isaacsim.ros2.bridge`) and publish
