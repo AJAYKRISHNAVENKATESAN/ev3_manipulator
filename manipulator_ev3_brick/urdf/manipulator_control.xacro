@@ -1,0 +1,175 @@
+<?xml version="1.0"?>
+<robot name="manipulator_ev3_brick" 
+       xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <ros2_control name="ManipulatorSystem" type="system">
+    <hardware>
+      <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+    </hardware>
+
+    <!-- Motor A: Base rotation -->
+    <joint name="arm_1_base_link_joint">
+      <command_interface name="position">
+        <param name="min">-1.5708</param>
+        <param name="max">1.5708</param>
+      </command_interface>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <!-- Motor B: Arm pitch -->
+    <joint name="left_arm_linkage_arm_2_joint">
+      <command_interface name="position">
+        <param name="min">-1.5708</param>
+        <param name="max">1.5708</param>
+      </command_interface>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <!-- Motor C: Gripper -->
+    <joint name="left_gear_arm_3_joint">
+      <command_interface name="position">
+        <param name="min">-1.5708</param>
+        <param name="max">1.5708</param>
+      </command_interface>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <!-- Motor D: Conveyor -->
+   <joint name="left_pulley_shaft_motor_housing_joint">
+      <command_interface name="velocity">
+      <param name="min">-10.0</param>
+      <param name="max">10.0</param>
+      </command_interface>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="left_pulley_left_pulley_shaft_joint">
+      <param name="mimic">left_pulley_shaft_motor_housing_joint</param>
+      <param name="multiplier">1</param>
+      <param name="offset">0</param>
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="right_pulley_shaft_right_pulley_shaft_linkage_joint">
+      <param name="mimic">left_pulley_shaft_motor_housing_joint</param>
+      <param name="multiplier">-1</param>
+      <param name="offset">0</param>
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="right_pulley_right_pulley_shaft_joint">
+      <param name="mimic">left_pulley_shaft_motor_housing_joint</param>
+      <param name="multiplier">-1</param>
+      <param name="offset">0</param>
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <!-- MIMIC: keeps arm_3 vertical -->
+    <joint name="arm_2_connector_arm_2_joint">
+      <param name="mimic">left_arm_linkage_arm_2_joint</param>
+      <param name="multiplier">-1</param>
+      <param name="offset">0</param>
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <!-- MIMIC: gripper right gear -->
+    <joint name="right_gear_arm_3_joint">
+      <param name="mimic">left_gear_arm_3_joint</param>
+      <param name="multiplier">-1</param>
+      <param name="offset">0</param>
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <!-- MIMIC: left fingers -->
+    <joint name="left_inner_finger_arm_3_joint">
+      <param name="mimic">left_gear_arm_3_joint</param>
+      <param name="multiplier">1</param>
+      <param name="offset">0</param>
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="left_outer_finger_arm_3_joint">
+      <param name="mimic">left_gear_arm_3_joint</param>
+      <param name="multiplier">-1</param>
+      <param name="offset">0</param>
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <!-- MIMIC: right fingers -->
+    <joint name="right_inner_finger_arm_3_joint">
+      <param name="mimic">right_gear_arm_3_joint</param>
+      <param name="multiplier">1</param>
+      <param name="offset">0</param>
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="right_outer_finger_arm_3_joint">
+      <param name="mimic">right_gear_arm_3_joint</param>
+      <param name="multiplier">-1</param>
+      <param name="offset">0</param>
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+     <!-- Left finger linkages -->
+    <joint name="left_inner_linkage_left_inner_finger_joint">
+      <param name="mimic">left_gear_arm_3_joint</param>
+      <param name="multiplier">1</param>
+      <param name="offset">0</param>
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="left_outer_linkage_left_outer_finger_joint">
+      <param name="mimic">left_gear_arm_3_joint</param>
+      <param name="multiplier">-1</param>
+      <param name="offset">0</param>
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    
+    <joint name="right_inner_linkage_right_inner_finger_joint">
+      <param name="mimic">right_gear_arm_3_joint</param>
+      <param name="multiplier">1</param>
+      <param name="offset">0</param>
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="right_outer_linkage_right_outer_finger_joint">
+      <param name="mimic">right_gear_arm_3_joint</param>
+      <param name="multiplier">-1</param>
+      <param name="offset">0</param>
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+  </ros2_control>
+
+</robot>
