@@ -26,3 +26,23 @@ Work in progress -> to do
 
 
 https://github.com/user-attachments/assets/9ebfe38d-4cc8-4826-ae7d-aa0d116ae9a8
+
+## Development environment (Docker)
+
+Self-contained envs for a **native Ubuntu host with an NVIDIA GPU**.
+
+### Gazebo / ROS 2 (Jazzy + Gazebo Harmonic)
+```bash
+xhost +local:docker                                   # once: allow GUI
+docker compose -f docker/docker-compose.yml up -d --build
+docker compose -f docker/docker-compose.yml exec ev3-manipulator-dev bash
+# inside:  cb   (colcon build)   then   cs   (source)
+```
+Brings up ROS 2 Jazzy + Gazebo Harmonic with `ros_gz`, `gz_ros2_control`,
+`ros2_control(lers)`, and MoveIt 2. The repo is mounted at
+`/workspace/src/ev3_manipulator`.
+
+### Isaac Sim 5.1 (headless + WebRTC)
+See [`docker/isaac-sim/README.md`](docker/isaac-sim/README.md). On Blackwell
+(RTX 50-series) the host needs driver **580** — see
+[`docker/isaac-sim/DRIVER_DOWNGRADE.md`](https://github.com/PavanSandaka/project-drishti/blob/main/docker/isaac-sim/DRIVER_DOWNGRADE.md).

@@ -1,0 +1,53 @@
+# Isaac Sim 5.1 — headless container with WebRTC livestream (native Linux).
+#
+# This is SEPARATE from ../docker-compose.yml (that one is the native-Linux ROS2/
+# Gazebo dev stack). This file targets a native Ubuntu 22.04/24.04 host with an RTX GPU.
+#
+# Prereqs on the host:
+#   1. NVIDIA driver + `nvidia-container-toolkit` (sudo nvidia-ctk runtime configure --runtime=docker)
+#   2. `docker login nvcr.io`  (username: $oauthtoken, password: NGC API key)
+#   3. Cache dirs created + owned by uid 1234 — the start_isaac.sh script does this.
+#
+# Launch (recommended): ./start_isaac.sh
+# Then connect with the Isaac Sim WebRTC Streaming Client (see README.md).
+services:
+  isaac-sim:
+    image: nvcr.io/nvidia/isaac-sim:5.1.0
+    container_name: isaac-sim
+
+    # Default: run headless with WebRTC livestream so `docker compose up` just works.
+    # To poke around interactively instead:
+    #   docker compose run --rm isaac-sim bash
+    entrypoint: ["/bin/bash", "-lc"]
+    command: ["./runheadless.sh -v"]
+
+    environment:
+      - ACCEPT_EULA=Y
+      - PRIVACY_CONSENT=Y
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+
+    # host networking is REQUIRED for WebRTC livestream (TCP 49100 / UDP 47998).
+    network_mode: host
+    stdin_open: true
+    tty: true
+
+    # Isaac Sim 5.1 containers run as a non-root user (uid:gid 1234).
+    user: "1234:1234"
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu, graphics, video, display, compute, utility]
+
+    # Persist shader/asset cache between runs (first launch is slow, later ones fast).
+    volumes:
+      - ${HOME}/docker/isaac-sim/cache/main:/isaac-sim/.cache:rw
+      - ${HOME}/docker/isaac-sim/cache/computecache:/isaac-sim/.nv/ComputeCache:rw
+      - ${HOME}/docker/isaac-sim/logs:/isaac-sim/.nvidia-omniverse/logs:rw
+      - ${HOME}/docker/isaac-sim/config:/isaac-sim/.nvidia-omniverse/config:rw
+      - ${HOME}/docker/isaac-sim/data:/isaac-sim/.local/share/ov/data:rw
+      - ${HOME}/docker/isaac-sim/pkg:/isaac-sim/.local/share/ov/pkg:rw
