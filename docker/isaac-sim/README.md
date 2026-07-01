@@ -5,7 +5,7 @@ GPU. We use the **official** NVIDIA image (`nvcr.io/nvidia/isaac-sim:5.1.0`) —
 custom build — wrapped in a compose file so it's a pull-and-go on any machine.
 
 > This is separate from the repo's top-level `docker/docker-compose.yml`, which is
-> the WSL2 ROS 2 / Gazebo dev stack. Don't mix them.
+> the native-Linux ROS 2 / Gazebo dev stack. Don't mix them.
 
 ## Why headless + streaming
 Isaac Sim renders on the GPU box and streams the viewport to a thin **WebRTC
