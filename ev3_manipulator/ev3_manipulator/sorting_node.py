@@ -1,43 +1,56 @@
 #!/usr/bin/env python3
 import math
+import subprocess
+import threading
+import time
 import rclpy
 from rclpy.node import Node
 from rclpy.action import ActionClient
 from control_msgs.action import FollowJointTrajectory
 from trajectory_msgs.msg import JointTrajectoryPoint
 from builtin_interfaces.msg import Duration
-from std_msgs.msg import Float64, Float64MultiArray
-import subprocess
-import threading
-import time
-import socket
+from std_msgs.msg import Float64, Float64MultiArray, String
 
-# ── Geometry & Spatial Anchors ────────────────────────────────────────────────
-SPAWN_X    = -0.14824
-SPAWN_Y    =  0.29075
-SPAWN_Z    =  0.09232
-PICKUP_Z   =  SPAWN_Z + 0.022 
+# ==================================================
+# GEOMETRY & SPATIAL ANCHORS
+# ==================================================
 
-PICKUP_X    = -0.015
-TRANSPORT_Z = SPAWN_Z + 0.005  
-BELT_END_R  =  0.17
-BELT_END_L  = -0.17
+SPAWN_X = -0.14824
+SPAWN_Y = 0.29075
+SPAWN_Z = 0.09232
+PICKUP_Z = SPAWN_Z + 0.022
 
-STEP_SIZE   =  0.008   
-STEP_DELAY  =  0.090   
+PICKUP_X = -0.015
+TRANSPORT_Z = SPAWN_Z + 0.005
+
+BELT_END_R = 0.17
+BELT_END_L = -0.17
+
+STEP_SIZE = 0.008
+STEP_DELAY = 0.090
+
+SIM_BASE_HOME = 0.0
+SIM_BASE_RED_BIN = -1.5708
+SIM_BASE_BLUE_BIN = 1.5708
 
 THETA1_MIN = -math.pi / 2
-THETA1_MAX =  math.pi / 2
-THETA2_MIN = -0.55             
-THETA2_MAX =  math.pi / 3
+THETA1_MAX = math.pi / 2
+THETA2_MIN = -0.55
+THETA2_MAX = math.pi / 3
 
-ARM_HOME   = [0.0, 0.2]        
+ARM_HOME = [0.0, 0.2]
+CLEARANCE_PITCH = 0.2
 
-BALL_RGB   = {
-    'red':   (1,    0,    0   ),
-    'blue':  (0,    0,    1   ),
+SIM_GRIPPER_OPEN = 0.5
+SIM_GRIPPER_CLOSE = 0.0
+
+MAX_BALLS = 4
+
+BALL_RGB = {
+    'red': (1, 0, 0),
+    'blue': (0, 0, 1),
     'black': (0.05, 0.05, 0.05),
-    'green': (0,    0.8,  0   ),
+    'green': (0, 0.8, 0),
 }
 
 BALL_SDF = """<sdf version='1.7'>
@@ -45,16 +58,33 @@ BALL_SDF = """<sdf version='1.7'>
     <link name='link'>
       <inertial>
         <mass>0.05</mass>
-        <inertia><ixx>8e-06</ixx><iyy>8e-06</iyy><izz>8e-06</izz></inertia>
+        <inertia>
+          <ixx>8e-06</ixx>
+          <iyy>8e-06</iyy>
+          <izz>8e-06</izz>
+        </inertia>
       </inertial>
       <collision name='col'>
-        <geometry><sphere><radius>0.0185</radius></sphere></geometry>
+        <geometry>
+          <sphere>
+            <radius>0.0185</radius>
+          </sphere>
+        </geometry>
         <surface>
-          <friction><ode><mu>0.7</mu><mu2>0.7</mu2></ode></friction>
+          <friction>
+            <ode>
+              <mu>0.7</mu>
+              <mu2>0.7</mu2>
+            </ode>
+          </friction>
         </surface>
       </collision>
       <visual name='vis'>
-        <geometry><sphere><radius>0.0185</radius></sphere></geometry>
+        <geometry>
+          <sphere>
+            <radius>0.0185</radius>
+          </sphere>
+        </geometry>
         <material>
           <ambient>{r} {g} {b} 1</ambient>
           <diffuse>{r} {g} {b} 1</diffuse>
@@ -64,260 +94,484 @@ BALL_SDF = """<sdf version='1.7'>
   </model>
 </sdf>"""
 
+
 def solve_ik_sim(x, y, z_target):
     theta1 = math.atan2(x, y)
-    Z0 = 0.220995          
-    R_ARM = 0.226963  
-    sin_t2 = (z_target - Z0) / R_ARM
-    sin_t2 = max(-1.0, min(1.0, sin_t2))  
+
+    z0 = 0.220995
+    r_arm = 0.226963
+
+    sin_t2 = (z_target - z0) / r_arm
+    sin_t2 = max(-1.0, min(1.0, sin_t2))
+
     theta2 = math.asin(sin_t2)
-    return max(THETA1_MIN, min(THETA1_MAX, theta1)), max(THETA2_MIN, min(THETA2_MAX, theta2))
+
+    theta1 = max(THETA1_MIN, min(THETA1_MAX, theta1))
+    theta2 = max(THETA2_MIN, min(THETA2_MAX, theta2))
+
+    return theta1, theta2
+
 
 class SortingNode(Node):
     def __init__(self):
-        super().__init__('sorting1_node')
-        self._arm_client = ActionClient(self, FollowJointTrajectory, '/arm_controller/follow_joint_trajectory')
-        self._gripper_pub = self.create_publisher(Float64MultiArray, '/gripper_controller/commands', 10)
-        self._belt_vel_pub = self.create_publisher(Float64, '/conveyor_belt_vel', 10)
-        
-        self.ball_count  = 0
-        
-        # Thread Synchronization Tools for HIL Interlocks
-        self._detected_color = None
+        super().__init__('sorting_node')
+
+        # ---------------- Controllers ----------------
+        self._arm_client = ActionClient(
+            self,
+            FollowJointTrajectory,
+            '/arm_controller/follow_joint_trajectory'
+        )
+
+        self._gripper_pub = self.create_publisher(
+            Float64MultiArray,
+            '/gripper_controller/commands',
+            10
+        )
+
+        self._belt_vel_pub = self.create_publisher(
+            Float64,
+            '/conveyor_belt_vel',
+            10
+        )
+
+        # ---------------- Hardware interface subscribers ----------------
+        self._start_homing_sub = self.create_subscription(
+            String,
+            '/hw/start_homing',
+            self._start_homing_callback,
+            10
+        )
+
+        self._ev3_homed_sub = self.create_subscription(
+            String,
+            '/hw/ev3_homed',
+            self._ev3_homed_callback,
+            10
+        )
+
+        self._ev3_gripper_open_sub = self.create_subscription(
+            String,
+            '/hw/ev3_gripper_open',
+            self._ev3_gripper_open_callback,
+            10
+        )
+
+        self._color_sub = self.create_subscription(
+            String,
+            '/hw/ball_detected',
+            self._ball_detected_callback,
+            10
+        )
+
+        self._ready_pickup_sub = self.create_subscription(
+            String,
+            '/hw/ready_pickup',
+            self._ready_pickup_callback,
+            10
+        )
+
+        self._ready_place_sub = self.create_subscription(
+            String,
+            '/hw/ready_place',
+            self._ready_place_callback,
+            10
+        )
+
+        self._theta1_sub = self.create_subscription(
+            Float64,
+            '/hw/theta1',
+            self._theta1_callback,
+            10
+        )
+
+        self._theta2_sub = self.create_subscription(
+            Float64,
+            '/hw/theta2',
+            self._theta2_callback,
+            10
+        )
+
+        # ---------------- Sim -> hardware interface publishers ----------------
+        self._sim_homed_pub = self.create_publisher(
+            String,
+            '/sim/homed',
+            10
+        )
+
+        self._sim_gripper_open_pub = self.create_publisher(
+            String,
+            '/sim/gripper_open',
+            10
+        )
+
+        self._spawn_confirmed_pub = self.create_publisher(
+            String,
+            '/sim/spawn_confirmed',
+            10
+        )
+
+        self._sim_ready_pickup_pub = self.create_publisher(
+            String,
+            '/sim/ready_pickup',
+            10
+        )
+
+        self._sim_ready_place_pub = self.create_publisher(
+            String,
+            '/sim/ready_place',
+            10
+        )
+
+        self._sim_cycle_done_pub = self.create_publisher(
+            String,
+            '/sim/cycle_done',
+            10
+        )
+
+        # ---------------- Thread synchronization ----------------
+        self._start_homing_event = threading.Event()
+        self._ev3_homed_event = threading.Event()
+        self._ev3_gripper_open_event = threading.Event()
+
         self._color_event = threading.Event()
         self._pickup_event = threading.Event()
         self._place_event = threading.Event()
 
-        # Socket Server Setup binding to all system interfaces
-        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.server.bind(('0.0.0.0', 5005))
-        self.server.listen(1)
-        self.ev3_client = None
+        self._detected_color = None
+        self.ball_count = 0
 
-        threading.Thread(target=self._start, daemon=True).start()
+        threading.Thread(
+            target=self._start,
+            daemon=True
+        ).start()
 
-    def _start(self):
-        time.sleep(2.0)
-        self._arm_client.wait_for_server()
-        self._send_trajectory([ARM_HOME], [2.0])
-        self._grip(0.0)
-        
-        self.get_logger().info('Listening for EV3 on port 5005...')
-        client_sock, addr = self.server.accept()
-        self.get_logger().info(f'TCP transport connection established from {addr}')
-        
-        try:
-            client_sock.settimeout(5.0)
-            handshake_msg = client_sock.recv(1024).decode('utf-8').strip()
-            if handshake_msg == "EV3_CONNECT_REQUEST":
-                client_sock.sendall(b"ROS_CONNECT_ACCEPT\n")
-                self.get_logger().info('Application Handshake Completed Successfully! ✓')
-                client_sock.settimeout(None)
-                self.ev3_client = client_sock
-                
-                # Start background hardware listener thread
-                threading.Thread(target=self._listen_to_ev3, daemon=True).start()
-            else:
-                self.get_logger().error("Handshake rejected. Invalid header token.")
-                client_sock.close()
-                return
-        except (socket.error, socket.timeout) as e:
-            self.get_logger().error(f"Handshake pipeline failure: {e}")
-            client_sock.close()
+    # ==================================================
+    # ROS utility
+    # ==================================================
+
+    def _publish_string(self, publisher, text):
+        msg = String()
+        msg.data = text
+        publisher.publish(msg)
+
+    # ==================================================
+    # Subscriber callbacks
+    # ==================================================
+
+    def _start_homing_callback(self, msg):
+        self.get_logger().info("Received /hw/start_homing.")
+        self._start_homing_event.set()
+
+    def _ev3_homed_callback(self, msg):
+        self.get_logger().info("Received /hw/ev3_homed.")
+        self._ev3_homed_event.set()
+
+    def _ev3_gripper_open_callback(self, msg):
+        self.get_logger().info("Received /hw/ev3_gripper_open.")
+        self._ev3_gripper_open_event.set()
+
+    def _ball_detected_callback(self, msg):
+        color = msg.data.strip().lower()
+
+        if color not in ['red', 'blue', 'black', 'green']:
+            self.get_logger().warn(f"Ignoring unknown color: {color}")
             return
 
+        self._detected_color = color
+        self._color_event.set()
+
+        self.get_logger().info(f"Hardware detected ball: {color}")
+
+    def _ready_pickup_callback(self, msg):
+        self.get_logger().info("Hardware reached pickup-ready pose.")
+        self._pickup_event.set()
+
+    def _ready_place_callback(self, msg):
+        self.get_logger().info("Hardware reached place-ready pose.")
+        self._place_event.set()
+
+    def _theta1_callback(self, msg):
+        self.get_logger().info(f"[EV3 telemetry] theta1 = {msg.data:.2f} deg")
+
+    def _theta2_callback(self, msg):
+        self.get_logger().info(f"[EV3 telemetry] theta2 = {msg.data:.2f} deg")
+
+    # ==================================================
+    # Main startup thread
+    # ==================================================
+
+    def _start(self):
+        self.get_logger().info("Waiting for arm action server...")
+        self._arm_client.wait_for_server()
+        self.get_logger().info("Arm action server available.")
+
+        self.get_logger().info("Starting coordinated sorting loop.")
         self._main_loop()
 
-    def _listen_to_ev3(self):
-        """ Background thread parser that isolates streaming socket I/O from execution timelines """
-        network_buffer = ""
-        while rclpy.ok() and self.ev3_client:
-            try:
-                data = self.ev3_client.recv(1024).decode('utf-8')
-                if not data:
-                    self.get_logger().error("Physical EV3 connection dropped cleanly by remote host.")
-                    self.ev3_client = None
-                    break
-                
-                network_buffer += data
-                while "\n" in network_buffer:
-                    line, network_buffer = network_buffer.split("\n", 1)
-                    line = line.strip()
-                    self._process_incoming_line(line)
-            except socket.error as e:
-                self.get_logger().error(f"Socket transport read fault: {e}")
-                self.ev3_client = None
-                break
+    # ==================================================
+    # Homing
+    # ==================================================
 
-    def _process_incoming_line(self, line):
-        if line.startswith("DETECTED:"):
-            self._detected_color = line.split(":", 1)[1].strip()
-            self._color_event.set()
-        elif line == "READY_PICKUP":
-            self.get_logger().info("Received [READY_PICKUP] confirmation from hardware.")
-            self._pickup_event.set()
-        elif line == "READY_PLACE":
-            self.get_logger().info("Received [READY_PLACE] confirmation from hardware.")
-            self._place_event.set()
-        elif line.startswith("THETA1:"):
-            try:
-                val = float(line.split(":", 1)[1])
-                self.get_logger().info(f"[EV3 Telemetry] Joint 1 Space: {val:.2f}°")
-            except ValueError: pass
-        elif line.startswith("THETA2:"):
-            try:
-                val = float(line.split(":", 1)[1])
-                self.get_logger().info(f"[EV3 Telemetry] Joint 2 Space: {val:.2f}°")
-            except ValueError: pass
+    def _execute_initial_homing(self):
+        self.get_logger().info("Executing simulated homing sequence...")
+
+        self._send_trajectory([[0.0, 0.0]], [1.5])
+        time.sleep(1.6)
+
+        self._grip(SIM_GRIPPER_OPEN)
+        time.sleep(0.3)
+
+        self.get_logger().info("Homing step 1: arm_2 pitching up to 0.2 rad.")
+        self._send_trajectory([[0.0, 0.2]], [1.0])
+        time.sleep(1.1)
+
+        self.get_logger().info("Homing step 2: arm_1 rotating right by +60 deg.")
+        self._send_trajectory([[1.0472, 0.2]], [1.2])
+        time.sleep(1.3)
+
+        self.get_logger().info("Homing step 3: arm_1 returning to center/home.")
+        self._send_trajectory([[0.0, 0.2]], [1.2])
+        time.sleep(1.3)
+
+        self.get_logger().info("Sim homing motion complete.")
+
+    def _execute_cycle_homing(self):
+        """
+        Per-ball homing cycle.
+
+        EV3 sends START_HOMING.
+        Sim homes.
+        EV3 sends EV3_HOMED.
+        Sim publishes /sim/homed.
+        EV3 opens gripper and sends EV3_GRIPPER_OPEN.
+        Sim opens gripper and publishes /sim/gripper_open.
+        """
+
+        self.get_logger().info("Waiting for EV3 START_HOMING for this ball...")
+        self._start_homing_event.wait()
+        self._start_homing_event.clear()
+
+        self._ev3_homed_event.clear()
+        self._ev3_gripper_open_event.clear()
+
+        self._execute_initial_homing()
+
+        self.get_logger().info("Waiting for EV3_HOMED...")
+        self._ev3_homed_event.wait()
+        self._ev3_homed_event.clear()
+
+        self.get_logger().info("Publishing /sim/homed.")
+        self._publish_string(self._sim_homed_pub, "done")
+
+        self.get_logger().info("Waiting for EV3_GRIPPER_OPEN...")
+        self._ev3_gripper_open_event.wait()
+        self._ev3_gripper_open_event.clear()
+
+        self.get_logger().info("Opening simulated gripper.")
+        self._grip(SIM_GRIPPER_OPEN)
+        time.sleep(1.0)
+
+        self.get_logger().info("Publishing /sim/gripper_open.")
+        self._publish_string(self._sim_gripper_open_pub, "done")
+
+    # ==================================================
+    # Main coordinated loop
+    # ==================================================
 
     def _main_loop(self):
         self.start_conveyor(0.05)
-        while self.ball_count < 4 and self.ev3_client:
-            self.get_logger().info('Awaiting hardware sensor trigger stream...')
-            
-            # Block safely until background listener receives a color string
+
+        while self.ball_count < MAX_BALLS:
+            # Home the sim every cycle, triggered by EV3.
+            self._execute_cycle_homing()
+
+            self.get_logger().info("Waiting for hardware ball detection...")
+
             self._color_event.wait()
-            if not self.ev3_client: break
             color = self._detected_color
+
+            self._detected_color = None
             self._color_event.clear()
 
-            self.get_logger().info(f'=== Ball {self.ball_count + 1}: {color.upper()} ===')
+            if color is None:
+                continue
 
+            self.get_logger().info(
+                f"=== Ball {self.ball_count + 1}: {color.upper()} ==="
+            )
+
+            # Spawn immediately after EV3 sensor detects the ball.
             name = self._spawn(color)
             time.sleep(0.1)
 
-            # Release EV3 feeder arm obstacle block
-            self.ev3_client.sendall(b"ACK_SPAWN\n")
+            self._publish_string(self._spawn_confirmed_pub, color)
+            self.get_logger().info("Published /sim/spawn_confirmed.")
 
-            if color == 'red':
+            if color in ['red', 'blue']:
+                # Sim ball travels to pickup while EV3 conveyor moves real ball.
                 self._move_ball(name, SPAWN_X, PICKUP_X)
-                self._pick_place_sequence(left_side=True)
-            elif color == 'blue':
-                self._move_ball(name, SPAWN_X, PICKUP_X)
-                self._pick_place_sequence(left_side=False)
+
+                # Old smooth coarse sync.
+                self._pick_place_sequence(left_side=(color == 'red'))
+
+                self._publish_string(self._sim_cycle_done_pub, color)
+                self.get_logger().info("Published /sim/cycle_done.")
+
             elif color in ['black', 'green']:
-                self._fall(name, direction=-1 if color == 'black' else 1)
+                # Correct behavior:
+                # black -> runs down conveyor
+                # green -> falls near sensor side
+                direction = 1 if color == 'black' else -1
+
+                self._fall(name, direction=direction)
                 time.sleep(1.5)
+
+                self._publish_string(self._sim_cycle_done_pub, color)
+                self.get_logger().info("Published /sim/cycle_done.")
 
         self.stop_conveyor()
         self._send_trajectory([ARM_HOME], [2.0])
-        self._grip(0.0)
-        self.get_logger().info('=== Execution Cycle Complete ===')
+        self._grip(SIM_GRIPPER_OPEN)
+
+        self.get_logger().info("=== Execution cycle complete ===")
+
+    # ==================================================
+    # Red / Blue pick-place sequence - coarse sync
+    # ==================================================
 
     def _pick_place_sequence(self, left_side=True):
-        target_yaw = -1.5708 if left_side else 1.5708
+        bin_yaw = SIM_BASE_RED_BIN if left_side else SIM_BASE_BLUE_BIN
+
         _, pick_pitch = solve_ik_sim(PICKUP_X, SPAWN_Y, PICKUP_Z)
 
-        # 1. Pre-open fingers and descend to pickup location
-        self._grip(0.5)
-        time.sleep(0.3)
-        self._send_trajectory(positions=[[0.0, pick_pitch]], durations=[0.8])
-        time.sleep(0.9)
+        # ---------------- PICKUP READY ----------------
+        self._grip(SIM_GRIPPER_OPEN)
+        time.sleep(0.1)
 
-        # ── INTERLOCK POINT 1: PICKUP POSTURE CONFIRMATION ────────────────
-        self.get_logger().info("Holding pose. Waiting for physical EV3 to match position...")
+        self.get_logger().info("Moving sim arm to pickup-ready pose.")
+        self._send_trajectory(
+            positions=[[SIM_BASE_HOME, CLEARANCE_PITCH]],
+            durations=[1.0]
+        )
+        time.sleep(1.1)
+
+        self.get_logger().info("Waiting for EV3 READY_PICKUP...")
         self._pickup_event.wait()
         self._pickup_event.clear()
-        
-        # Simultaneously trigger physical grab and virtual twin closure
-        self.ev3_client.sendall(b"ROS_READY_PICKUP\n")
-        self.get_logger().info("Sent [ROS_READY_PICKUP]. Closing gripper jaws.")
-        self._grip(0.0)
-        time.sleep(0.5)
-        
-        # Lift and rotate toward sortation bins
-        self._send_trajectory(positions=[[0.0, 0.2]], durations=[0.8])
+
+        self._publish_string(self._sim_ready_pickup_pub, "ready")
+        self.get_logger().info("Published /sim/ready_pickup.")
+
+        # ---------------- PICK ----------------
+        self.get_logger().info("Sim pitching down to pick ball.")
+        self._send_trajectory(
+            positions=[[SIM_BASE_HOME, pick_pitch]],
+            durations=[0.8]
+        )
         time.sleep(0.9)
-        self._send_trajectory(positions=[[target_yaw, 0.2]], durations=[1.5])
-        time.sleep(1.6)
 
-        # Descend to drop height
-        self._send_trajectory(positions=[[target_yaw, -0.45]], durations=[1.5])
-        time.sleep(1.1)
-        self._grip(0.15) # Center crack
-        time.sleep(0.4)
+        self.get_logger().info("Closing simulated gripper.")
+        self._grip(SIM_GRIPPER_CLOSE)
+        time.sleep(0.5)
 
-        # ── INTERLOCK POINT 2: PLACE POSTURE CONFIRMATION ─────────────────
-        self.get_logger().info("Holding drop pose. Waiting for physical EV3 alignment...")
+        self.get_logger().info("Sim pitching up to clearance with ball.")
+        self._send_trajectory(
+            positions=[[SIM_BASE_HOME, CLEARANCE_PITCH]],
+            durations=[0.8]
+        )
+        time.sleep(0.9)
+
+        # ---------------- PLACE READY ----------------
+        self.get_logger().info("Waiting for EV3 READY_PLACE...")
         self._place_event.wait()
         self._place_event.clear()
-        
-        # Release object on both targets simultaneously
-        self.ev3_client.sendall(b"ROS_READY_PLACE\n")
-        self.get_logger().info("Sent [ROS_READY_PLACE]. Releasing target payload.")
-        self._grip(0.5)
-        time.sleep(2.0)
 
-        # 6. Recoil upward wide open, clear sorting boundary, wrap home
-        self._send_trajectory(positions=[[target_yaw, 0.2]], durations=[1.2])
+        self._publish_string(self._sim_ready_place_pub, "ready")
+        self.get_logger().info("Published /sim/ready_place.")
+
+        # ---------------- PLACE ----------------
+        self.get_logger().info(
+            f"Sim swiveling to bin yaw {math.degrees(bin_yaw):.1f} deg."
+        )
+        self._send_trajectory(
+            positions=[[bin_yaw, CLEARANCE_PITCH]],
+            durations=[1.2]
+        )
         time.sleep(1.3)
-        self._grip(0.0)
+
+        self.get_logger().info("Sim pitching down into bin.")
+        self._send_trajectory(
+            positions=[[bin_yaw, -0.45]],
+            durations=[0.8]
+        )
+        time.sleep(0.9)
+
+        self.get_logger().info("Opening simulated gripper to release ball.")
+        self._grip(0.2)
+        time.sleep(0.4)
+
+        self._grip(SIM_GRIPPER_OPEN)
         time.sleep(0.6)
-        self._send_trajectory(positions=[ARM_HOME], durations=[1.5])
-        time.sleep(1.6)
+
+        self.get_logger().info("Sim pitching up from bin.")
+        self._send_trajectory(
+            positions=[[bin_yaw, CLEARANCE_PITCH]],
+            durations=[0.8]
+        )
+        time.sleep(0.9)
+
+        self.get_logger().info("Sim returning to pickup/home state.")
+        self._send_trajectory(
+            positions=[[SIM_BASE_HOME, CLEARANCE_PITCH]],
+            durations=[1.2]
+        )
+        time.sleep(1.3)
+
+        self._grip(SIM_GRIPPER_OPEN)
+        time.sleep(0.3)
+
+    # ==================================================
+    # Controller helpers
+    # ==================================================
 
     def _send_trajectory(self, positions, durations):
         goal = FollowJointTrajectory.Goal()
-        goal.trajectory.joint_names = ['arm_1_base_link_joint', 'arm_2_left_arm_linkage_joint']
+
+        goal.trajectory.joint_names = [
+            'arm_1_base_link_joint',
+            'arm_2_left_arm_linkage_joint'
+        ]
+
         for pos, t in zip(positions, durations):
-            p = JointTrajectoryPoint()
-            p.positions = [float(v) for v in pos]
-            p.time_from_start = Duration(sec=int(t), nanosec=int((t - int(t)) * 1e9))
-            goal.trajectory.points.append(p)
+            point = JointTrajectoryPoint()
+            point.positions = [float(v) for v in pos]
+            point.time_from_start = Duration(
+                sec=int(t),
+                nanosec=int((t - int(t)) * 1e9)
+            )
+            goal.trajectory.points.append(point)
 
         future = self._arm_client.send_goal_async(goal)
-        while not future.done(): time.sleep(0.01)
-        result_future = future.result().get_result_async()
-        while not result_future.done(): time.sleep(0.01)
 
-    def _move_ball(self, name, x_start, x_end):
-        x = x_start
-        while x < x_end:
-            x = min(x + STEP_SIZE, x_end)
-            self._set_pose(name, x, SPAWN_Y, TRANSPORT_Z)
-            time.sleep(STEP_DELAY)
+        while rclpy.ok() and not future.done():
+            time.sleep(0.01)
 
-    def _fall(self, name, direction):
-        x_end = BELT_END_L - 0.06 if direction < 0 else BELT_END_R + 0.06
-        x, z = SPAWN_X, TRANSPORT_Z
-        step = STEP_SIZE * direction
-        while (direction > 0 and x < x_end) or (direction < 0 and x > x_end):
-            x += step
-            if (direction > 0 and x > BELT_END_R) or (direction < 0 and x < BELT_END_L):
-                z = max(z - 0.006, -0.05)
-            self._set_pose(name, x, SPAWN_Y, z)
-            time.sleep(STEP_DELAY)
+        goal_handle = future.result()
 
-    def _set_pose(self, name, x, y, z):
-        cmd = [
-            'ign', 'service', '-s', '/world/empty/set_pose',
-            '--reqtype', 'ignition.msgs.Pose', '--reptype', 'ignition.msgs.Boolean',
-            '--timeout', '150', '--req',
-            f'name: "{name}" position: {{x: {x:.5f} y: {y:.5f} z: {z:.5f}}}'
-        ]
-        subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if not goal_handle.accepted:
+            self.get_logger().error("Trajectory goal rejected.")
+            return
+
+        result_future = goal_handle.get_result_async()
+
+        while rclpy.ok() and not result_future.done():
+            time.sleep(0.01)
 
     def _grip(self, position):
         msg = Float64MultiArray()
         msg.data = [float(position)]
         self._gripper_pub.publish(msg)
-
-    def _spawn(self, color, retries=3):
-        self.ball_count += 1
-        name    = f'{color}_ball_{self.ball_count}'
-        r, g, b = BALL_RGB.get(color, (0.5, 0.5, 0.5))
-        sdf     = BALL_SDF.format(name=name, r=r, g=g, b=b)
-        cmd = [
-            'ros2', 'run', 'ros_gz_sim', 'create',
-            '-name', name, '-x', str(SPAWN_X), '-y', str(SPAWN_Y), '-z', str(SPAWN_Z), '-string', sdf
-        ]
-        for attempt in range(retries):
-            try:
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-                if result.returncode == 0: return name
-            except subprocess.TimeoutExpired: time.sleep(1.0)
-        return name
 
     def start_conveyor(self, speed=0.05):
         msg = Float64()
@@ -327,18 +581,153 @@ class SortingNode(Node):
     def stop_conveyor(self):
         self.start_conveyor(0.0)
 
+    # ==================================================
+    # Ball motion helpers
+    # ==================================================
+
+    def _move_ball(self, name, x_start, x_end):
+        x = x_start
+
+        while x < x_end:
+            x = min(x + STEP_SIZE, x_end)
+
+            self._set_pose(
+                name,
+                x,
+                SPAWN_Y,
+                TRANSPORT_Z
+            )
+
+            time.sleep(STEP_DELAY)
+
+    def _fall(self, name, direction):
+        x_end = BELT_END_L - 0.06 if direction < 0 else BELT_END_R + 0.06
+        x = SPAWN_X
+        z = TRANSPORT_Z
+
+        step = STEP_SIZE * direction
+
+        while (direction > 0 and x < x_end) or (direction < 0 and x > x_end):
+            x += step
+
+            if (
+                (direction > 0 and x > BELT_END_R)
+                or
+                (direction < 0 and x < BELT_END_L)
+            ):
+                z = max(z - 0.006, -0.05)
+
+            self._set_pose(
+                name,
+                x,
+                SPAWN_Y,
+                z
+            )
+
+            time.sleep(STEP_DELAY)
+
+    def _set_pose(self, name, x, y, z):
+        cmd = [
+            'ign',
+            'service',
+            '-s',
+            '/world/empty/set_pose',
+            '--reqtype',
+            'ignition.msgs.Pose',
+            '--reptype',
+            'ignition.msgs.Boolean',
+            '--timeout',
+            '150',
+            '--req',
+            f'name: "{name}" position: {{x: {x:.5f} y: {y:.5f} z: {z:.5f}}}'
+        ]
+
+        subprocess.Popen(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+
+    def _spawn(self, color, retries=3):
+        self.ball_count += 1
+
+        name = f'{color}_ball_{self.ball_count}'
+
+        r, g, b = BALL_RGB.get(color, (0.5, 0.5, 0.5))
+
+        sdf = BALL_SDF.format(
+            name=name,
+            r=r,
+            g=g,
+            b=b
+        )
+
+        cmd = [
+            'ros2',
+            'run',
+            'ros_gz_sim',
+            'create',
+            '-name',
+            name,
+            '-x',
+            str(SPAWN_X),
+            '-y',
+            str(SPAWN_Y),
+            '-z',
+            str(SPAWN_Z),
+            '-string',
+            sdf
+        ]
+
+        for attempt in range(retries):
+            try:
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=10
+                )
+
+                if result.returncode == 0:
+                    self.get_logger().info(f"Spawned {name}.")
+                    return name
+
+                self.get_logger().warn(
+                    f"Spawn attempt {attempt + 1} failed: {result.stderr}"
+                )
+
+            except subprocess.TimeoutExpired:
+                self.get_logger().warn(
+                    f"Spawn attempt {attempt + 1} timed out."
+                )
+                time.sleep(1.0)
+
+        self.get_logger().error(
+            f"Failed to spawn {name}; continuing anyway."
+        )
+
+        return name
+
+
 def main(args=None):
     rclpy.init(args=args)
+
     node = SortingNode()
+
     executor = rclpy.executors.MultiThreadedExecutor()
     executor.add_node(node)
+
     try:
         executor.spin()
+
     except KeyboardInterrupt:
         pass
+
     finally:
         node.stop_conveyor()
+        node.destroy_node()
         rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()
