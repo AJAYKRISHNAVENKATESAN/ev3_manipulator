@@ -1,506 +1,618 @@
 #!/usr/bin/env pybricks-micropython
-# from pybricks.hubs import EV3Brick
-# from pybricks.ev3devices import Motor, TouchSensor, ColorSensor
-# from pybricks.parameters import Port, Stop, Color
-# from pybricks.tools import wait
-# import math
-# import socket as socket
-
-# # ==================================================
-# # INITIALIZATION & NETWORK SETUP
-# # ==================================================
-# ev3 = EV3Brick()
-# count = 0
-
-# # Network Parameters mapped directly from Ubuntu System Settings Screen
-# ROS2_SERVER_IP = "169.254.35.229"  
-# PORT = 5005
-
-# # Translation dictionary to map Pybricks Enums to raw lowercase ROS2 keys
-# COLOR_MAP = {
-#     Color.RED: "red",
-#     Color.BLUE: "blue",
-#     Color.BLACK: "black",
-#     Color.GREEN: "green"
-# }
-
-# # Motors
-# gripper  = Motor(Port.A)
-# arm      = Motor(Port.B)
-# base     = Motor(Port.C)
-# conveyer = Motor(Port.D)
-
-# # Sensors
-# arm_home    = TouchSensor(Port.S3)
-# base_home   = TouchSensor(Port.S1)
-# color_sensor = ColorSensor(Port.S4)
-
-# # ==================================================
-# # ROBOT GEOMETRY & SAFETY CONFIGURATIONS
-# # ==================================================
-# L0 = 40.0                      
-# L1 = 50.0
-# L2 = 95.0
-# L3 = 185.0
-# L4 = 110.0 
-
-# L12   = math.sqrt(L1**2 + L2**2 - 2*L1*L2*math.cos(math.radians(135)))
-# L_ARM = L12 + L3
-
-# GEAR_BASE = 36 / 12
-# GEAR_ARM  = 40 / 8
-
-# # Absolute Hardware Safety Boundaries
-# THETA1_MIN = -180.0
-# THETA1_MAX = 180.0
-
-# # Live Operational Telemetry Observers
-# max_theta2_observed = -999.0
-# min_theta2_observed = 999.0
-
-# # ==================================================
-# # NETWORK TRANSPORT UTILITIES
-# # ==================================================
-# sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-# def connect_and_handshake():
-#     ev3.speaker.say("Connecting to server node")
-#     try:
-#         sock.connect((ROS2_SERVER_IP, PORT))
-#         sock.send(b"EV3_CONNECT_REQUEST\n")
-        
-#         response = read_socket_line()
-#         if "ROS_CONNECT_ACCEPT" in response:
-#             ev3.speaker.say("Handshake verified")
-#             return True
-#         else:
-#             ev3.speaker.say("Handshake rejected")
-#             return False
-#     except Exception as e:
-#         print("Network error:", e)
-#         ev3.speaker.say("Connection failed")
-#         return False
-
-# def read_socket_line():
-#     line = ""
-#     while True:
-#         char = sock.recv(1).decode('utf-8')
-#         if char == '\n' or not char:
-#             break
-#         line += char
-#     return line.strip()
-
-# # ==================================================
-# # HOMING & SAFETY ENFORCEMENT
-# # ==================================================
-# def home_joints():
-#     ev3.speaker.say("Homing sequence active")
-#     home_joint(arm,  arm_home,  -1, 15)
-#     home_joint(base, base_home,  1, 120 * GEAR_BASE)
-#     ev3.speaker.say("Homing complete")
-
-# def home_joint(motor, sensor, direction, offset, speed=100):
-#     motor.run(direction * speed)
-#     while not sensor.pressed():
-#         wait(10)
-#     motor.stop(Stop.BRAKE)
-#     motor.run_angle(-direction * speed, offset, Stop.HOLD)
-#     motor.reset_angle(0)
-
-# def trigger_safety_recovery(violated_joint, bad_value):
-#     base.stop(Stop.BRAKE)
-#     arm.stop(Stop.BRAKE)
-#     conveyer.stop(Stop.BRAKE)
-#     print("CRITICAL VIOLATION ON " + violated_joint + ": " + str(bad_value))
-#     ev3.speaker.say("Safety boundary limit reached")
-#     wait(3000) 
-#     home_joints()
-
-# # ==================================================
-# # KINEMATICS WITH INTEGRATED REAL-TIME TELEMETRY
-# # ==================================================
-# def inverse_base(x, y):
-#     return math.degrees(math.atan2(y, x))
-
-# def inverse_arm(x, z):
-#     dz = z - L0
-#     dz = max(min(dz, L_ARM), -L_ARM)
-#     theta = math.asin(dz / L_ARM)
-#     return -math.degrees(theta)
-
-# def move_base_to(x, y, speed=150):
-#     t1 = inverse_base(x, y)
-#     if t1 < THETA1_MIN or t1 > THETA1_MAX:
-#         trigger_safety_recovery("THETA1", t1)
-#         return False
-    
-#     sock.send(("THETA1:" + str(t1) + "\n").encode('utf-8'))
-#     target = t1 * GEAR_BASE
-#     base.run_angle(speed, target - base.angle(), Stop.HOLD)
-#     return True
-
-# def move_arm_to(x, z, speed=100):
-#     global max_theta2_observed, min_theta2_observed
-#     t2 = inverse_arm(x, z)
-    
-#     if t2 > max_theta2_observed:
-#         max_theta2_observed = t2
-#     if t2 < min_theta2_observed:
-#         min_theta2_observed = t2
-        
-#     print("Live Theta2: " + str(t2) + " | Observed Range: [" + str(min_theta2_observed) + ", " + str(max_theta2_observed) + "]")
-#     sock.send(("THETA2:" + str(t2) + "\n").encode('utf-8'))
-    
-#     target = t2 * GEAR_ARM
-#     arm.run_angle(speed, target - arm.angle(), Stop.HOLD)
-#     return True
-
-# def open_gripper():
-#     gripper.run_angle(90, 90, Stop.HOLD, False)
-#     gripper.run_until_stalled(200, then=Stop.COAST, duty_limit=50)
-#     wait(500)
-
-# def close_gripper():
-#     gripper.run_angle(-90, 90, Stop.HOLD, False)
-#     gripper.run_until_stalled(-200, then=Stop.HOLD, duty_limit=60)
-#     wait(500)
-
-# # ==================================================
-# # RUN SYSTEM INITIALIZATION
-# # ==================================================
-# home_joints()
-# if not connect_and_handshake():
-#     raise SystemExit("Network connection failed.")
-
-# # ==================================================
-# # MAIN COORDINATED SYSTEM LOOP
-# # ==================================================
-# while count < 4:
-#     # Start conveyor running continuously looking for a target
-#     conveyer.run(80) 
-    
-#     color = None
-#     while color not in COLOR_MAP:
-#         color = color_sensor.color()
-#         wait(20)
-        
-#     # Ball found! Immediately halt conveyor edge line to analyze identity
-#     conveyer.stop(Stop.BRAKE)
-    
-#     color_str = COLOR_MAP[color]
-#     ev3.speaker.say(color_str)  # Audibly announces detected color profile
-#     print("Processing detected ball color: " + color_str)
-    
-#     # ── ROUTINE A: BYPASS BALLS (BLACK / GREEN) ───────────────────────────
-#     if color_str in ["black", "green"]:
-#         dist = -650 if color_str == "black" else 100
-#         conveyer.run_angle(80, dist, Stop.HOLD)
-#         count += 1
-#         print("Finished processing bypass ball cycle: " + str(count) + "/4")
-
-#     # ── ROUTINE B: MANIPULATOR SORTING BALLS (RED / BLUE) ──────────────────
-#     elif color_str in ["red", "blue"]:
-#         # 1. First move conveyor to shift ball to absolute physical position
-#         conveyer.run_angle(80, -300, Stop.HOLD)
-        
-#         # 2. Only say "ready" now that the ball has arrived at the position
-#         ev3.speaker.say("ready")
-        
-#         # 3. Inform ROS2 server to generate digital twin model
-#         sock.send(("DETECTED:" + color_str + "\n").encode('utf-8'))
-        
-#         # 4. Wait for Gazebo node spawn acknowledgement
-#         response = read_socket_line()
-#         if response == "ACK_SPAWN":
-#             print("ROS2 confirmed spawn. Deploying manipulator assembly...")
-            
-#             # 5. Bring mechanical arm down to initial approach hovering posture
-#             move_arm_to(-110, -180)
-#             open_gripper()
-            
-#             # 6. Audio cue and interlock broadcast for pickup confirmation
-#             ev3.speaker.say("ready for pickup")
-#             sock.send(b"READY_PICKUP\n")
-#             print("Holding at pickup pose. Waiting for simulation confirmation...")
-            
-#             while True:
-#                 sync_msg = read_socket_line()
-#                 if "ROS_READY_PICKUP" in sync_msg:
-#                     break
-            
-#             # 7. Execute synchronized drop-descent and physical squeeze
-#             print("Lockstep verified. Dropping to grab target.")
-#             move_arm_to(-200, -250)
-#             close_gripper()
-#             wait(200)
-            
-#             # 8. Retract arm back up to clearance space and announce achievement
-#             move_arm_to(-110, -180)
-#             ev3.speaker.say("picked up")
-            
-#             # 9. Deliver payload to corresponding collection bin locations
-#             if color_str == "red":
-#                 move_base_to(-120, 150) 
-#                 move_arm_to(-200, -250)
-#             else:
-#                 move_base_to(120, 150)
-#                 move_arm_to(-200, -250)
-            
-#             # 10. Sync timing for drop-off sequence execution
-#             sock.send(b"READY_PLACE\n")
-#             print("Holding at drop posture. Waiting for simulation confirmation...")
-            
-#             while True:
-#                 sync_msg = read_socket_line()
-#                 if "ROS_READY_PLACE" in sync_msg:
-#                     break
-            
-#             # 11. Finalize release sequence in precise lockstep alignment
-#             print("Lockstep verified. Actuating open release jaw.")
-#             open_gripper()
-#             wait(500)
-            
-#             # 12. Output strict validation receipt message as requested
-#             print("MESSAGE: The " + color_str + " ball has been dropped.")
-#             ev3.speaker.say("dropped")
-            
-#             # 13. Reset kinematic postures back to clean absolute origins
-#             home_joints()
-#             count += 1
-#             print("Finished processing sorted ball cycle: " + str(count) + "/4")
-
-# # Post-execution wrap-up termination rules
-# conveyer.stop(Stop.COAST)
-# ev3.speaker.say("Sorting process complete")
-# print("All 4 balls processed successfully.")
-
-
-
-
-
-
-#!/usr/bin/env pybricks-micropython
 from pybricks.hubs import EV3Brick
 from pybricks.ev3devices import Motor, TouchSensor, ColorSensor
 from pybricks.parameters import Port, Stop, Color
-from pybricks.tools import wait
+from pybricks.tools import wait, StopWatch
 import math
-import usocket as socket
+import socket as socket
 
 # ==================================================
-# INITIALIZATION & NETWORK SETUP
+# INITIALIZATION
 # ==================================================
+
 ev3 = EV3Brick()
-count = int(0)
+count = 0
 
-ROS2_SERVER_IP = "169.254.35.229"  
+ROS2_SERVER_IP = "169.254.35.229"
 PORT = 5005
+
+USE_ROS2_SYNC = True
+MAX_BALLS = 4
 
 # Motors
 gripper  = Motor(Port.A)
-arm      = Motor(Port.B)
-base     = Motor(Port.C)
+arm      = Motor(Port.B)   # arm2 / pitch
+base     = Motor(Port.C)   # arm1 / base yaw
 conveyer = Motor(Port.D)
 
 # Sensors
-arm_home   = TouchSensor(Port.S3)
-base_home  = TouchSensor(Port.S1)
+arm_home     = TouchSensor(Port.S3)
+base_home    = TouchSensor(Port.S1)
 color_sensor = ColorSensor(Port.S4)
+
+VALID_COLORS = [Color.RED, Color.BLUE, Color.BLACK, Color.GREEN]
 
 COLOR_MAP = {
     Color.RED: "red",
     Color.BLUE: "blue",
     Color.BLACK: "black",
-    Color.GREEN: "green"
+    Color.GREEN: "green",
 }
 
-# ROBOT GEOMETRY (mm)
-L0 = 40.0                      
+
+# ==================================================
+# GEOMETRY / CALIBRATION
+# ==================================================
+
+L0 = 40.0
 L1 = 50.0
 L2 = 95.0
 L3 = 185.0
-L4 = 110.0 
-L12   = math.sqrt(L1**2 + L2**2 - 2*L1*L2*math.cos(math.radians(135)))
+
+L12 = math.sqrt(L1**2 + L2**2 - 2 * L1 * L2 * math.cos(math.radians(135)))
 L_ARM = L12 + L3
 
-GEAR_BASE = 36 / 12
-GEAR_ARM  = 40 / 8
+GEAR_BASE = 36 / 12       # 3:1
+GEAR_ARM  = 40 / 8        # 5:1
 
-# Network Utilities
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# Tuned pickup-center offset.
+# Homing:
+#   touch base switch
+#   move away by 112 world degrees
+#   reset encoder to 0
+# That final pose becomes pickup center.
+BASE_HOME_OFFSET_WORLD_DEG = 112
+BASE_HOME_OFFSET_MOTOR_DEG = BASE_HOME_OFFSET_WORLD_DEG * GEAR_BASE
 
-def connect_and_handshake():
-    ev3.speaker.say("Connecting")
-    try:
-        sock.connect((ROS2_SERVER_IP, PORT))
-        sock.send(b"EV3_CONNECT_REQUEST\n")
-        response = read_socket_line()
-        if "ROS_CONNECT_ACCEPT" in response:
-            ev3.speaker.say("Connected")
-            return True
-        return False
-    except:
-        return False
+Z_CLEARANCE = 50
+PICK_XZ     = (-110, -230)
+PLACE_XZ    = (-200, -250)
+
+# Gripper calibration:
+#   open-zero = 0
+#   wide-open = +10
+#   close inward = -60
+GRIPPER_OPEN_TARGET = 0
+GRIPPER_WIDE_OPEN_TARGET = 10
+GRIPPER_CLOSE_TARGET = -60
+GRIPPER_SPEED = 60
+
+gripper_state = None
+sock = None
+
+
+# ==================================================
+# NETWORK UTILITIES
+# ==================================================
+
+def send_line(text):
+    global sock
+
+    if USE_ROS2_SYNC and sock:
+        print("TX:", text)
+        sock.send((text + "\n").encode("utf-8"))
+
 
 def read_socket_line():
+    global sock
+
     line = ""
+
     while True:
-        char = sock.recv(1).decode('utf-8')
-        if char == '\n' or not char:
+        char = sock.recv(1).decode("utf-8")
+
+        if char == "\n" or not char:
             break
+
         line += char
+
     return line.strip()
 
-# ==================================================
-# HOMING & KINEMATICS (INITIAL ONLY)
-# ==================================================
-def home_joint(motor, sensor, direction, offset, speed=100):
-    motor.run(direction * speed)
-    while not sensor.pressed():
+
+def wait_for(token):
+    print("Waiting for:", token)
+
+    while True:
+        line = read_socket_line()
+
+        if line:
+            print("RX:", line)
+
+        if token in line:
+            print("Matched:", token)
+            return line
+
         wait(10)
-    motor.stop(Stop.BRAKE)
-    motor.run_angle(-direction * speed, offset, Stop.HOLD)
-    motor.reset_angle(0)
 
-def execute_system_homing():
-    home_joint(arm,  arm_home,  -1, 15)
-    home_joint(base, base_home,  1, 120 * GEAR_BASE)
 
-# Run initial homing sequence once before cycles begin
-ev3.speaker.say("Starting homing sequence")
-execute_system_homing()
-ev3.speaker.say("Homing complete")
+def connect_and_handshake(max_attempts=20):
+    global sock
 
-if not connect_and_handshake():
-    raise SystemExit("Network connection failed.")
+    ev3.speaker.say("Connecting")
+
+    attempt = 0
+
+    while attempt < max_attempts:
+        try:
+            print("Connection attempt:", attempt + 1)
+
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect((ROS2_SERVER_IP, PORT))
+
+            send_line("EV3_CONNECT_REQUEST")
+
+            response = read_socket_line()
+            print("Handshake response:", response)
+
+            if "ROS_CONNECT_ACCEPT" in response:
+                ev3.speaker.say("Connected")
+                return True
+
+            try:
+                sock.close()
+            except:
+                pass
+
+        except Exception as e:
+            print("Connection failed:", e)
+
+            try:
+                if sock:
+                    sock.close()
+            except:
+                pass
+
+            wait(1000)
+
+        attempt += 1
+
+    ev3.speaker.say("Connection failed")
+    return False
+
+
+# ==================================================
+# KINEMATICS
+# ==================================================
 
 def inverse_base(x, y):
     return math.degrees(math.atan2(y, x))
 
+
 def inverse_arm(x, z):
     dz = z - L0
-    dz = max(min(dz, L_ARM), -L_ARM)   
+    dz = max(min(dz, L_ARM), -L_ARM)
+
     theta = math.asin(dz / L_ARM)
+
     return -math.degrees(theta)
+
 
 def move_base_to(x, y, speed=150):
     deg = inverse_base(x, y)
-    sock.send(("THETA1:" + str(deg) + "\n").encode('utf-8'))
+
+    print("theta1 target for", x, y, "=", deg, "deg")
+
+    if USE_ROS2_SYNC:
+        send_line("THETA1:" + str(deg))
+
     target = deg * GEAR_BASE
-    base.run_angle(speed, target - base.angle(), Stop.HOLD)
+
+    base.run_angle(
+        speed,
+        target - base.angle(),
+        Stop.HOLD
+    )
+
+    print("[BASE] encoder angle:", base.angle())
+
+
+def move_base_yaw(world_deg, speed=150):
+    print("theta1 target yaw =", world_deg, "deg")
+
+    if USE_ROS2_SYNC:
+        send_line("THETA1:" + str(world_deg))
+
+    target = world_deg * GEAR_BASE
+
+    base.run_angle(
+        speed,
+        target - base.angle(),
+        Stop.HOLD
+    )
+
+    print("[BASE] encoder angle:", base.angle())
+
 
 def move_arm_to(x, z, speed=100):
     deg = inverse_arm(x, z)
-    sock.send(("THETA2:" + str(deg) + "\n").encode('utf-8'))
+
+    print("theta2 target for", x, z, "=", deg, "deg")
+
+    if USE_ROS2_SYNC:
+        send_line("THETA2:" + str(deg))
+
     target = deg * GEAR_ARM
-    arm.run_angle(speed, target - arm.angle(), Stop.HOLD)
 
-def open_gripper():
-    gripper.run_angle(90, 90, Stop.HOLD, False) 
-    gripper.run_until_stalled(200, then=Stop.COAST, duty_limit=50)
-    wait(500)
+    arm.run_angle(
+        speed,
+        target - arm.angle(),
+        Stop.HOLD
+    )
 
-def close_gripper():
-    gripper.run_angle(-90, 90, Stop.HOLD, False) 
-    wait(500)
+    print("[ARM2] encoder angle:", arm.angle())
+
+
+def move_arm_clearance():
+    move_arm_to(0, Z_CLEARANCE)
+
 
 # ==================================================
-# MAIN COORDINTATED LOOP
+# SENSOR HELPERS
 # ==================================================
-while (count < 4):
-    ev3.speaker.say("Place a ball on conveyor")
-    wait(1000)
 
-    color = color_sensor.color()
+def sensor_debounced(sensor):
+    if not sensor.pressed():
+        return False
 
-    if color == Color.BLACK:
-        conveyer.stop()
-        ev3.speaker.say("Black")
-        conveyer.run_angle(80, -650, Stop.HOLD)
-        count += 1
+    wait(50)
 
-    elif color == Color.GREEN:
-        conveyer.stop()
-        ev3.speaker.say("Green")
-        conveyer.run_angle(80, 100, Stop.HOLD)
-        count += 1
+    return sensor.pressed()
 
-    elif color == Color.RED:
-        conveyer.stop()
-        ev3.speaker.say("Red")
-        conveyer.run_angle(80, -300, Stop.HOLD)
 
-        sock.send(b"DETECTED:red\n")
-        while True:
-            if "ACK_SPAWN" in read_socket_line(): break
+# ==================================================
+# HOMING
+# ==================================================
 
-        # Approach/Drop Station Location
-        move_arm_to(-110, -180)
-        open_gripper()
-        wait(300)
+def home_arm2(speed=60, timeout_ms=8000):
+    print("========== HOME ARM2 ==========")
+    print("[ARM2 HOME] start angle:", arm.angle())
 
-        # Clearance Lift and Swivel to Pickup (-90 deg)
-        move_arm_to(50, 50)
-        move_base_to(0, -50)
+    ev3.speaker.say("Arm home")
 
-        sock.send(b"READY_PICKUP\n")
-        while True:
-            if "ROS_READY_PICKUP" in read_socket_line(): break
+    watch = StopWatch()
+    arm.run(-speed)
 
-        # Plunge and Grab
-        move_arm_to(-200, -250)
-        close_gripper()
-        wait(300)
+    while not sensor_debounced(arm_home):
+        if watch.time() > timeout_ms:
+            arm.stop(Stop.BRAKE)
+            ev3.speaker.say("Arm timeout")
+            raise SystemExit("ARM2 homing timeout")
 
-        # Post-Grab Vertical Clearance Ascent
-        move_arm_to(50, 50)
+        wait(10)
 
-        sock.send(b"READY_PLACE\n")
-        while True:
-            if "ROS_READY_PLACE" in read_socket_line(): break
+    arm.stop(Stop.BRAKE)
+    print("[ARM2 HOME] hit switch angle:", arm.angle())
 
-        # Direct Return Sweep (+90 deg rotation back to center)
-        move_base_to(100, 0)
+    arm.run_angle(speed, 15, Stop.HOLD)
+    arm.reset_angle(0)
+
+    print("[ARM2 HOME] reset angle:", arm.angle())
+    wait(300)
+
+
+def home_base_to_pickup_center(speed=90, timeout_ms=20000):
+    print("========== HOME BASE ==========")
+    print("[BASE HOME] start angle:", base.angle())
+    print("[BASE HOME] offset world deg:", BASE_HOME_OFFSET_WORLD_DEG)
+    print("[BASE HOME] offset motor deg:", BASE_HOME_OFFSET_MOTOR_DEG)
+
+    ev3.speaker.say("Base home")
+
+    watch = StopWatch()
+    base.run(speed)
+
+    while not sensor_debounced(base_home):
+        if watch.time() > timeout_ms:
+            base.stop(Stop.BRAKE)
+            ev3.speaker.say("Base timeout")
+            raise SystemExit("Base homing timeout")
+
+        wait(10)
+
+    base.stop(Stop.BRAKE)
+    print("[BASE HOME] hit switch angle:", base.angle())
+
+    wait(200)
+
+    base.run_angle(-speed, BASE_HOME_OFFSET_MOTOR_DEG, Stop.HOLD)
+    base.reset_angle(0)
+
+    print("[BASE HOME] pickup center reset angle:", base.angle())
+    wait(300)
+
+    if USE_ROS2_SYNC:
+        send_line("THETA1:0.0")
+
+
+def execute_system_homing():
+    home_arm2()
+    home_base_to_pickup_center()
+
+
+# ==================================================
+# GRIPPER
+# ==================================================
+
+def calibrate_gripper_open_zero():
+    global gripper_state
+
+    ev3.speaker.say("Set gripper open")
+
+    print("========== GRIPPER OPEN-ZERO CALIBRATION ==========")
+    print("Manually put gripper in OPEN pickup state.")
+    print("This state will become gripper encoder angle 0.")
+
+    for i in [5, 4, 3, 2, 1]:
+        print("Starting in", i)
+        wait(1000)
+
+    gripper.reset_angle(0)
+    gripper_state = "open"
+
+    print("[GRIPPER] open-zero set. angle:", gripper.angle())
+    wait(300)
+
+
+def gripper_open():
+    global gripper_state
+
+    print("[GRIPPER] open target:", GRIPPER_OPEN_TARGET, "current:", gripper.angle())
+
+    gripper.run_target(
+        GRIPPER_SPEED,
+        GRIPPER_OPEN_TARGET,
+        then=Stop.HOLD
+    )
+
+    gripper_state = "open"
+
+    print("[GRIPPER] open done:", gripper.angle())
+    wait(300)
+
+
+def gripper_wide_open():
+    global gripper_state
+
+    print("[GRIPPER] wide open target:", GRIPPER_WIDE_OPEN_TARGET, "current:", gripper.angle())
+
+    gripper.run_target(
+        GRIPPER_SPEED,
+        GRIPPER_WIDE_OPEN_TARGET,
+        then=Stop.HOLD
+    )
+
+    gripper_state = "open"
+
+    print("[GRIPPER] wide open done:", gripper.angle())
+    wait(300)
+
+
+def gripper_close_for_pickup():
+    global gripper_state
+
+    print("[GRIPPER] close target:", GRIPPER_CLOSE_TARGET, "current:", gripper.angle())
+
+    # gripper.run_target(
+    #     GRIPPER_SPEED,
+    #     GRIPPER_CLOSE_TARGET,
+    #     then=Stop.HOLD
+    # )
+
+    gripper.run_time(
+        -60,
+        900,
+        then=Stop.HOLD,
+        wait=True
+    )
+
+    gripper_state = "closed"
+
+    print("[GRIPPER] timed close done:", gripper.angle())
+    wait(300)
+
+
+# ==================================================
+# STARTUP + PER-CYCLE HOMING SYNC
+# ==================================================
+
+def synchronized_startup():
+    """
+    Startup only connects to ROS2.
+    Homing is done inside each ball cycle.
+    """
+    if USE_ROS2_SYNC:
+        if not connect_and_handshake():
+            raise SystemExit("Network connection failed.")
+
+    ev3.speaker.say("Connected")
+
+
+def synchronized_homing_cycle(first_cycle=False):
+    """
+    EV3 and sim home before every ball.
+
+    Sequence:
+      EV3 -> START_HOMING
+      EV3 homes hardware
+      EV3 -> EV3_HOMED
+      sim homes and replies ROS_HOMED
+      EV3 opens gripper
+      EV3 -> EV3_GRIPPER_OPEN
+      sim opens gripper and replies ROS_GRIPPER_OPEN
+    """
+
+    if USE_ROS2_SYNC:
+        send_line("START_HOMING")
+
+    ev3.speaker.say("EV3 homing")
+    execute_system_homing()
+    ev3.speaker.say("EV3 homed")
+
+    if USE_ROS2_SYNC:
+        send_line("EV3_HOMED")
+        wait_for("ROS_HOMED")
+
+    if first_cycle:
+        calibrate_gripper_open_zero()
+
+    gripper_wide_open()
+
+    if USE_ROS2_SYNC:
+        send_line("EV3_GRIPPER_OPEN")
+        wait_for("ROS_GRIPPER_OPEN")
+
+    ev3.speaker.say("Homing done")
+
+
+# ==================================================
+# COLOR DETECTION
+# ==================================================
+
+def wait_for_ball_color():
+    while True:
+        color = color_sensor.color()
+
+        if color in VALID_COLORS:
+            wait(100)
+
+            if color_sensor.color() == color:
+                return color
+
+        wait(50)
+
+
+# ==================================================
+# PICKUP STATE
+# ==================================================
+
+def move_to_pickup_state_without_rehome():
+    move_base_yaw(0)
+    move_arm_clearance()
+    gripper_wide_open()
+
+
+# ==================================================
+# PICK AND PLACE - OLD STABLE COARSE SYNC
+# ==================================================
+
+def pick_and_place(bin_x, bin_y):
+    """
+    Old stable coarse-sync sequence.
+
+    Sync points:
+      READY_PICKUP
+      READY_PLACE
+      ROS_CYCLE_DONE
+
+    No fine-sync tokens.
+    """
+
+    # ---------------- PICKUP READY ----------------
+    move_to_pickup_state_without_rehome()
+
+    if USE_ROS2_SYNC:
+        send_line("READY_PICKUP")
+        wait_for("ROS_READY_PICKUP")
+
+    # ---------------- PICK ----------------
+    ev3.speaker.say("Pick")
+
+    move_arm_to(PICK_XZ[0], PICK_XZ[1])
+    gripper_close_for_pickup()
+    move_arm_clearance()
+
+    # ---------------- PLACE READY ----------------
+    if USE_ROS2_SYNC:
+        send_line("READY_PLACE")
+        wait_for("ROS_READY_PLACE")
+
+    # ---------------- PLACE ----------------
+    ev3.speaker.say("Place")
+
+    move_base_to(bin_x, bin_y)
+    move_arm_to(PLACE_XZ[0], PLACE_XZ[1])
+    gripper_wide_open()
+    move_arm_clearance()
+
+
+def wait_for_ros_cycle_done():
+    if USE_ROS2_SYNC:
+        wait_for("ROS_CYCLE_DONE")
+
+
+# ==================================================
+# MAIN
+# ==================================================
+
+synchronized_startup()
+
+while count < MAX_BALLS:
+    # Home both EV3 and sim for every ball cycle.
+    synchronized_homing_cycle(first_cycle=(count == 0))
+
+    move_to_pickup_state_without_rehome()
+
+    ev3.speaker.say("Place ball")
+
+    color = wait_for_ball_color()
+    color_name = COLOR_MAP[color]
+
+    conveyer.stop()
+    ev3.speaker.say(color_name)
+
+    # Send detection immediately after color detection.
+    if USE_ROS2_SYNC:
+        send_line("DETECTED:" + color_name)
+        wait_for("ACK_SPAWN")
+
+    if color == Color.RED:
+        # Real ball moves to pickup.
+        conveyer.run_angle(80, -280, Stop.HOLD)
+
+        # Red = -90.
+        pick_and_place(0, -50)
+
+        wait_for_ros_cycle_done()
         count += 1
 
     elif color == Color.BLUE:
-        conveyer.stop()
-        ev3.speaker.say("Blue")
-        conveyer.run_angle(80, -300, Stop.HOLD)
+        # Real ball moves to pickup.
+        conveyer.run_angle(80, -280, Stop.HOLD)
 
-        sock.send(b"DETECTED:blue\n")
-        while True:
-            if "ACK_SPAWN" in read_socket_line(): break
+        # Blue = +90.
+        pick_and_place(0, 50)
 
-        # Approach/Drop Station Location
-        move_arm_to(-110, -180)
-        open_gripper()
-        wait(300)
-
-        # Clearance Lift and Swivel to Pickup (+90 deg)
-        move_arm_to(50, 50)
-        move_base_to(0, 50)
-
-        sock.send(b"READY_PICKUP\n")
-        while True:
-            if "ROS_READY_PICKUP" in read_socket_line(): break
-
-        # Plunge and Grab
-        move_arm_to(-200, -250)
-        close_gripper()
-        wait(300)
-
-        # Unique Blue Vertical Clearance Ascent
-        move_arm_to(50, 30)
-
-        sock.send(b"READY_PLACE\n")
-        while True:
-            if "ROS_READY_PLACE" in read_socket_line(): break
-
-        # Direct Return Sweep (-90 deg rotation back to center)
-        move_base_to(100, 0)
+        wait_for_ros_cycle_done()
         count += 1
 
+    elif color == Color.BLACK:
+        # Black runs down the conveyor.
+        conveyer.run_angle(80, -650, Stop.HOLD)
+
+        wait_for_ros_cycle_done()
+        count += 1
+
+    elif color == Color.GREEN:
+        # Green travels the other way / falls near sensor side.
+        conveyer.run_angle(80, 100, Stop.HOLD)
+
+        wait_for_ros_cycle_done()
+        count += 1
+
+
+# ==================================================
+# SHUTDOWN
+# ==================================================
+
 conveyer.stop()
-sock.close()
-ev3.speaker.say("All balls sorted in respective stations. Process complete")
+
+if USE_ROS2_SYNC:
+    send_line("EV3_DONE")
+
+    try:
+        sock.close()
+    except:
+        pass
+
+ev3.speaker.say("All balls sorted")
+print("All balls sorted")
