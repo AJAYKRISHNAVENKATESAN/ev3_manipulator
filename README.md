@@ -1,29 +1,34 @@
 # ev3_manipulator
 
-ROS 2 (Jazzy) packages for the **EV3-brick Lego manipulator** — a robot arm that
-picks/sorts objects off a conveyor. Used as a git submodule in
+ROS 2 packages for the **EV3-brick Lego manipulator** — a robot arm that
+picks/sorts objects off a conveyor, synchronized between a Gazebo sim and the
+physical LEGO EV3 hardware. Used as a git submodule in
 [`project-drishti`](https://github.com/PavanSandaka/project-drishti) at
 `bots/ev3_manipulator`.
 
-## Packages
-- **`ev3_manipulator`** — the arm: URDF/xacro, meshes, gz (Gazebo Harmonic) sim
-  launch, `ros2_control`, and the sorting / hardware-interface nodes.
-- **`ev3_manipulator_moveit`** — MoveIt 2 motion-planning config.
+## Layout
+- **`ev3_manipulator/`** — ROS 2 package: URDF/xacro, meshes, Gazebo sim launch,
+  `ros2_control`, and the `sorting_node` / `hardware_interface` nodes that drive
+  the sim and talk to the physical brick over TCP.
+- **`ev3_brick/`** — **not a ROS 2 package.** `pybricks-micropython` that runs on
+  the physical EV3 brick itself; the hardware-side counterpart to
+  `hardware_interface.py`. See [`ev3_brick/README.md`](ev3_brick/README.md) for
+  the protocol and how to flash it.
+- **`ev3_manipulator_moveit/`** — MoveIt 2 config. **Experimental / unused** —
+  scaffolding for future MoveIt-based control of the sim and hardware; not
+  currently wired into `sorting_node`/`hardware_interface`, and its config still
+  targets an older URDF. Explored as future work, not part of the current
+  sorting pipeline.
 
 ## Build
 ```bash
 colcon build && source install/setup.bash
 ```
-Work in progress -> to do 
-->Current Tasks
-**Hardware Synchronization**: Establish real-time communication and state synchronization between the virtual Gazebo model and the physical LEGO EV3 manipulator.
-**CI/CD & Deployment**: Containerize the ROS 2 environment into a unified `Dockerfile` for seamless deployment across laboratory workstations.
-**Explore MoveIt 2 Integration in the future**: 
 
-> Note: the MoveIt config currently targets the older `manipulator_ev3_brick`
-> URDF; re-pointing it to this arm's URDF is a follow-up.
-
-
+## Status
+Hardware/sim synchronization (homing, pick/place, per-cycle handshake between
+`sorting_node.py` and the brick's `ev3_brick/sorting.py`) is the active work.
+MoveIt 2 integration is exploratory and not yet part of that pipeline.
 
 https://github.com/user-attachments/assets/9ebfe38d-4cc8-4826-ae7d-aa0d116ae9a8
 
@@ -31,16 +36,20 @@ https://github.com/user-attachments/assets/9ebfe38d-4cc8-4826-ae7d-aa0d116ae9a8
 
 Self-contained envs for a **native Ubuntu host with an NVIDIA GPU**.
 
-### Gazebo / ROS 2 (Jazzy + Gazebo Harmonic)
+### Default: ROS 2 Humble + Gazebo Fortress (Ignition)
 ```bash
-xhost +local:docker                                   # once: allow GUI
+xhost +local:root                                      # once: allow GUI
 docker compose -f docker/docker-compose.yml up -d --build
 docker compose -f docker/docker-compose.yml exec ev3-manipulator-dev bash
 # inside:  cb   (colcon build)   then   cs   (source)
 ```
-Brings up ROS 2 Jazzy + Gazebo Harmonic with `ros_gz`, `gz_ros2_control`,
-`ros2_control(lers)`, and MoveIt 2. The repo is mounted at
-`/workspace/src/ev3_manipulator`.
+This is the stack the manipulator sim and EV3 hardware sync were authored
+against — use this one unless you have a specific reason not to. The repo is
+mounted at `/workspace/src/ev3_manipulator`.
+
+### Alternate: ROS 2 Jazzy + Gazebo Harmonic
+See [`docker/jazzy/README.md`](docker/jazzy/README.md) — a separate env with its
+own container/volumes, for tracking the newer Jazzy/Harmonic stack.
 
 ### Isaac Sim 5.1 (headless + WebRTC)
 See [`docker/isaac-sim/README.md`](docker/isaac-sim/README.md). On Blackwell
