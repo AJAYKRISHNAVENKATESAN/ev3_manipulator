@@ -1,7 +1,9 @@
-# ev3_manipulator dev container — native Ubuntu host with an NVIDIA GPU.
-# GUI (RViz/Gazebo) via the host X server; GPU via nvidia-container-toolkit.
+# ev3_manipulator dev container — default env: ROS 2 Humble + Gazebo Fortress (Ignition).
+# Native Ubuntu host with an NVIDIA GPU. GUI (RViz/Gazebo) via the host X server;
+# GPU via nvidia-container-toolkit. Runs the manipulator sim / EV3 hardware sync
+# against the stack it was originally authored for.
 # On the host once per session, allow the container to use your display:
-#   xhost +local:docker
+#   xhost +local:root
 services:
   ev3-manipulator-dev:
     build:
@@ -25,7 +27,7 @@ services:
       - ..:/workspace/src/ev3_manipulator
       # native X11 socket for GUI apps
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      # persistent build artifacts
+      # persistent build artifacts (separate from the Jazzy env's volumes)
       - ev3_manipulator_build:/workspace/build
       - ev3_manipulator_install:/workspace/install
       - ev3_manipulator_log:/workspace/log

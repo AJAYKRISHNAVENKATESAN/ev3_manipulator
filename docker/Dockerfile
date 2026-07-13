@@ -1,8 +1,11 @@
-# ev3_manipulator — ROS 2 Jazzy + Gazebo Harmonic development environment
-FROM osrf/ros:jazzy-desktop-full
+# ev3_manipulator — ROS 2 Humble + Gazebo Fortress (Ignition) development environment
+# This is the default env: the manipulator sim and EV3 hardware sync were authored
+# against Humble + Ignition Fortress (ign-gazebo-6). For the newer ROS 2 Jazzy +
+# Gazebo Harmonic stack, see docker/jazzy/.
+FROM osrf/ros:humble-desktop-full
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV ROS_DISTRO=jazzy
+ENV ROS_DISTRO=humble
 ENV WORKSPACE_ROOT=/workspace
 ENV RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 
@@ -10,9 +13,9 @@ RUN apt-get update && apt-get install -y \
     build-essential cmake git wget curl unzip \
     python3-pip python3-colcon-common-extensions \
     ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
-    # Gazebo Harmonic (gz) integration + ros2_control bridge
+    # Ignition Fortress integration + ros2_control bridge
     ros-${ROS_DISTRO}-ros-gz \
-    ros-${ROS_DISTRO}-gz-ros2-control \
+    ros-${ROS_DISTRO}-ign-ros2-control \
     # ros2_control
     ros-${ROS_DISTRO}-ros2-control \
     ros-${ROS_DISTRO}-ros2-controllers \
