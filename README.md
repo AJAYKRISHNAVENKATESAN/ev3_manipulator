@@ -25,10 +25,15 @@ physical LEGO EV3 hardware. Used as a git submodule in
 colcon build && source install/setup.bash
 ```
 
-## Status
-Hardware/sim synchronization (homing, pick/place, per-cycle handshake between
-`sorting_node.py` and the brick's `ev3_brick/sorting.py`) is the active work.
-MoveIt 2 integration is exploratory and not yet part of that pipeline.
+## Status / Roadmap
+- **Sim ↔ EV3 stage synchronization — active work.** `sorting_node.py` and the
+  brick's `ev3_brick/sorting.py` handshake at each stage of a sort cycle
+  (homing, ready-to-pick, ready-to-place, cycle-done) over the TCP link owned
+  by `hardware_interface.py`. This sync is still being fine-tuned — timing and
+  stage boundaries between the sim and the physical arm are an ongoing area of
+  tuning, not a finished/stable protocol yet.
+- **MoveIt 2 — to be explored in the near future.** `ev3_manipulator_moveit/`
+  is experimental scaffolding, not yet wired into the sim/hardware sync above.
 
 https://github.com/user-attachments/assets/9ebfe38d-4cc8-4826-ae7d-aa0d116ae9a8
 
