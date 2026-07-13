@@ -17,8 +17,10 @@ class Ev3HardwareInterface(Node):
 
         self.detect_pub = self.create_publisher(String, '/hw/ball_detected', 10)
         self.ready_pickup_pub = self.create_publisher(String, '/hw/ready_pickup', 10)
+        self.start_pick_pub = self.create_publisher(String, '/hw/start_pick', 10)
         self.ready_place_pub = self.create_publisher(String, '/hw/ready_place', 10)
-
+        self.start_place_pub = self.create_publisher(String, '/hw/start_place', 10)
+        
         self.theta1_pub = self.create_publisher(Float64, '/hw/theta1', 10)
         self.theta2_pub = self.create_publisher(Float64, '/hw/theta2', 10)
 
@@ -180,8 +182,14 @@ class Ev3HardwareInterface(Node):
         elif line == "READY_PICKUP":
             self.publish_string(self.ready_pickup_pub, "ready")
 
+        elif line == "START_PICK":
+            self.publish_string(self.start_pick_pub, "start")
+
         elif line == "READY_PLACE":
             self.publish_string(self.ready_place_pub, "ready")
+        
+        elif line == "START_PLACE":
+            self.publish_string(self.start_place_pub, "start")
 
         elif line.startswith("THETA1:"):
             try:
