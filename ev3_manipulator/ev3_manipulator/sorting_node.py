@@ -2283,6 +2283,7 @@ from control_msgs.action import FollowJointTrajectory
 from trajectory_msgs.msg import JointTrajectoryPoint
 from builtin_interfaces.msg import Duration
 from std_msgs.msg import Float64, Float64MultiArray
+from conveyorbelt_msgs.srv import ConveyorBeltControl
 import subprocess
 import threading
 import time
@@ -2395,8 +2396,8 @@ class SortingNode(Node):
             '/arm_controller/follow_joint_trajectory')
         self._gripper_pub = self.create_publisher(
             Float64MultiArray, '/gripper_controller/commands', 10)
-        self._belt_vel_pub = self.create_publisher(
-            Float64, '/conveyor_belt_vel', 10)
+        self._conveyor_cli = self.create_client(
+            ConveyorBeltControl, '/CONVEYORPOWER')
         self.ball_count  = 0
         self.cycle_index = 0
         threading.Thread(target=self._start, daemon=True).start()
@@ -2416,7 +2417,7 @@ class SortingNode(Node):
     def _main_loop(self):
         self._send_trajectory([[0.0, 0.0]], [2.0])
         self._grip(GRIPPER_NEUTRAL)
-        self.start_conveyor(0.05)
+        self.start_conveyor(60.0)   # 0-100% via CONVEYORPOWER service
         time.sleep(1.0)
 
         while self.ball_count < 4:
@@ -2447,10 +2448,18 @@ class SortingNode(Node):
         self._grip(GRIPPER_NEUTRAL)
         self.get_logger().info('=== All 4 balls processed — sorting complete ✓ ===')
 
-    def start_conveyor(self, speed=0.05):
-        msg = Float64()
-        msg.data = float(speed)
-        self._belt_vel_pub.publish(msg)
+    def start_conveyor(self, power=60.0):
+        """Turn the belt on via the IFRA conveyor plugin's CONVEYORPOWER service (0-100%)."""
+        if not self._conveyor_cli.wait_for_service(timeout_sec=5.0):
+            self.get_logger().warn('CONVEYORPOWER service unavailable — belt not started')
+            return
+        req = ConveyorBeltControl.Request()
+        req.power = float(power)
+        future = self._conveyor_cli.call_async(req)
+        t0 = time.time()
+        while not future.done() and time.time() - t0 < 5.0:
+            time.sleep(0.05)
+        self.get_logger().info(f'Conveyor power set to {power:.0f}%')
 
     def stop_conveyor(self):
         self.start_conveyor(0.0)

@@ -12,6 +12,8 @@
   <depend>robot_state_publisher</depend>
   <depend>joint_state_publisher</depend>
   <depend>joint_state_publisher_gui</depend>
+  <depend>conveyorbelt_msgs</depend>
+  <depend>ros2_conveyorbelt</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
