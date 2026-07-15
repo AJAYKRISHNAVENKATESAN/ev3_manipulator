@@ -687,6 +687,33 @@
     <child link="conveyor_belt_link_1"/>
   </joint>
 
+  <!-- ===== Conveyor moving surface (IFRA gzfortress style) =====
+       Invisible thin high-friction slab that rides a prismatic joint. The
+       ros2gz_conveyorbelt_system plugin commands this joint's velocity and
+       resets its position at the 1cm limit, so objects ride the belt by
+       friction. Sized to the belt footprint; top set just above the belt mesh
+       (link-frame belt top ~0.039) so objects contact this slab, not scenery. -->
+  <link name="belt_moving">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="50.0"/>
+      <inertia ixx="1e-4" iyy="1e-4" izz="1e-4" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><box size="0.37 0.065 0.002"/></geometry>
+    </collision>
+  </link>
+
+  <joint name="belt_moving_joint" type="prismatic">
+    <origin xyz="0.099 0.035 0.040" rpy="0 0 0"/>
+    <parent link="conveyor_belt_link_1"/>
+    <child link="belt_moving"/>
+    <axis xyz="1 0 0"/>   <!-- belt travels along +X (long axis) -->
+    <limit lower="0.0" upper="0.01" effort="1e8" velocity="10.0"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+
   <joint name="left_pulley_shaft_motor_housing_shaft" type="continuous">
     <origin xyz="-0.123678 0.053 -0.017678" rpy="0 0 0"/>
     <parent link="motor_housing_link_1"/>

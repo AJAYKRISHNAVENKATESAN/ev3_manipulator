@@ -182,6 +182,22 @@
     <self_collide>false</self_collide>
   </gazebo>
 
+  <!-- High friction on the moving belt slab so objects grip and ride it. -->
+  <gazebo reference="belt_moving">
+    <mu1>100.0</mu1>
+    <mu2>100.0</mu2>
+    <kp>1e6</kp>
+    <kd>10.0</kd>
+    <self_collide>false</self_collide>
+  </gazebo>
+
+  <!-- Keep conveyor_belt_link_1 out of fixed-joint lumping so belt_moving_joint's
+       parent link survives the URDF->SDF conversion. -->
+  <gazebo reference="conveyor_link_linkage_joint">
+    <preserveFixedJoint>true</preserveFixedJoint>
+    <disableFixedJointLumping>true</disableFixedJointLumping>
+  </gazebo>
+
   <gazebo reference="conveyor_linkage_link_1">
     <material>${body_color}</material>
     <mu1>0.2</mu1>
@@ -203,14 +219,19 @@
     <self_collide>false</self_collide>
   </gazebo>
 
-  <!-- <gazebo>
-    <plugin filename="libROS2ConveyorBeltPlugin.so" name="ros2_conveyorbelt_plugin">
-      <ros>
-          <namespace></namespace>
-      </ros>
-      <max_velocity>0.5</max_velocity> <publish_rate>10</publish_rate>
+  <!-- Conveyor belt (IFRA gzfortress System plugin). Drives belt_moving_joint's
+       velocity + resets its position at the 1cm limit → objects ride the belt.
+       Control via the CONVEYORPOWER service (0-100%). Old Gazebo-Classic
+       libROS2ConveyorBeltPlugin.so retired (won't load on Fortress). -->
+  <gazebo>
+    <plugin filename="libros2gz_conveyorbelt_system.so" name="ros2_conveyorbelt_system">
+      <joint_name>belt_moving_joint</joint_name>
+      <max_velocity>0.15</max_velocity>
+      <publish_rate>1000</publish_rate>
+      <lower_limit>0.0</lower_limit>
+      <upper_limit>0.01</upper_limit>
     </plugin>
-  </gazebo> -->
+  </gazebo>
 
   <gazebo>
     <plugin filename="gz_ros2_control-system"
