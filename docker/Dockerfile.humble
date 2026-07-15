@@ -1,0 +1,37 @@
+# ev3_manipulator — ROS 2 Humble + Gazebo Fortress (Ignition) dev environment.
+#
+# Companion to the default Jazzy/Harmonic docker/Dockerfile. The conveyor belt
+# (gzfortress) plugin builds against ignition-gazebo6, so the conveyor work runs
+# on this Fortress stack:
+#   docker build -f docker/Dockerfile.humble -t ev3-manipulator-fortress .
+FROM osrf/ros:humble-desktop-full
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV ROS_DISTRO=humble
+ENV WORKSPACE_ROOT=/workspace
+ENV RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential cmake git python3-colcon-common-extensions \
+    ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
+    # Gazebo Fortress + ros_gz bridge/sim (also pulls ignition-gazebo6 dev headers)
+    ros-${ROS_DISTRO}-ros-gz \
+    ros-${ROS_DISTRO}-ign-ros2-control \
+    # ros2_control
+    ros-${ROS_DISTRO}-ros2-control \
+    ros-${ROS_DISTRO}-ros2-controllers \
+    ros-${ROS_DISTRO}-controller-manager \
+    ros-${ROS_DISTRO}-xacro \
+    # utilities + GL for optional GUI
+    vim tmux mesa-utils \
+    libglvnd0 libgl1 libglx0 libegl1 libgles2 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p ${WORKSPACE_ROOT}/src
+RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> ~/.bashrc && \
+    echo "source /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash" >> ~/.bashrc && \
+    echo "[ -f ${WORKSPACE_ROOT}/install/setup.bash ] && source ${WORKSPACE_ROOT}/install/setup.bash" >> ~/.bashrc && \
+    echo "alias cb='cd ${WORKSPACE_ROOT} && colcon build --symlink-install'" >> ~/.bashrc
+
+WORKDIR ${WORKSPACE_ROOT}
+CMD ["bash"]
