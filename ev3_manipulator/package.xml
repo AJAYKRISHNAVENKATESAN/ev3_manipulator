@@ -13,10 +13,11 @@
   <depend>joint_state_publisher</depend>
   <depend>joint_state_publisher_gui</depend>
 
-  <!-- Gazebo (Harmonic) simulation + ros2_control -->
+  <!-- Gazebo sim + ros2_control (Fortress/Ignition on Humble, Harmonic on Jazzy) -->
   <depend>ros_gz_sim</depend>
   <depend>ros_gz_bridge</depend>
-  <depend>gz_ros2_control</depend>
+  <depend condition="$ROS_DISTRO == humble">ign_ros2_control</depend>
+  <depend condition="$ROS_DISTRO == jazzy">gz_ros2_control</depend>
   <depend>ros2_control</depend>
   <depend>ros2_controllers</depend>
   <depend>controller_manager</depend>
