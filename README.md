@@ -31,7 +31,9 @@ colcon build && source install/setup.bash
   (homing, ready-to-pick, ready-to-place, cycle-done) over the TCP link owned
   by `hardware_interface.py`. This sync is still being fine-tuned — timing and
   stage boundaries between the sim and the physical arm are an ongoing area of
-  tuning, not a finished/stable protocol yet.
+  tuning, not a finished/stable protocol yet. Both the sim and the physical
+  brick run their own sort cycle correctly in isolation; getting their timing
+  to line up stage-for-stage over the TCP handshake is the remaining work.
 - **MoveIt 2 — to be explored in the near future.** `ev3_manipulator_moveit/`
   is experimental scaffolding, not yet wired into the sim/hardware sync above.
 
