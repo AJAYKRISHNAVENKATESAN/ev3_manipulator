@@ -25,14 +25,14 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -47,14 +47,14 @@
     <visual>
       <origin xyz="0.020125 -0.103583 -0.094" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/arm_1_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/arm_1_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin xyz="0.020125 -0.103583 -0.094" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/arm_1_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/arm_1_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -69,14 +69,14 @@
     <visual>
       <origin xyz="0.055125 -0.038117 -0.204384" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/left_arm_linkage_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/left_arm_linkage_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin xyz="0.055125 -0.038117 -0.204384" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/left_arm_linkage_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/left_arm_linkage_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -91,14 +91,14 @@
     <visual>
       <origin xyz="0.055125 -0.0374 -0.266626" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/arm_2_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/arm_2_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin xyz="0.055125 -0.0374 -0.266626" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/arm_2_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/arm_2_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -113,14 +113,14 @@
     <visual>
       <origin xyz="0.027725 -0.264363 -0.266669" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/arm_2_connector_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/arm_2_connector_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin xyz="0.027725 -0.264363 -0.266669" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/arm_2_connector_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/arm_2_connector_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -136,14 +136,14 @@
     <visual>
       <origin xyz="0.020224 -0.267275 -0.221038" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/arm_3_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/arm_3_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin xyz="0.020224 -0.267275 -0.221038" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/arm_3_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/arm_3_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -162,14 +162,14 @@
     <visual>
       <origin xyz="0.019938 -0.309958 -0.147299" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/left_gear_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/left_gear_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin xyz="0.019938 -0.309958 -0.147299" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/left_gear_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/left_gear_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -184,14 +184,14 @@
     <visual>
       <origin xyz="0.019938 -0.276958 -0.147299" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/right_gear_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/right_gear_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin xyz="0.019938 -0.276958 -0.147299" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/right_gear_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/right_gear_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -206,14 +206,14 @@
     <visual>
       <origin xyz="0.04992 -0.305958 -0.147299" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/left_finger_inner_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/left_finger_inner_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin xyz="0.04992 -0.305958 -0.147299" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/left_finger_inner_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/left_finger_inner_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -228,14 +228,14 @@
     <visual>
       <origin xyz="-0.010062 -0.305958 -0.147299" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/left_finger_outer_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/left_finger_outer_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin xyz="-0.010062 -0.305958 -0.147299" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/left_finger_outer_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/left_finger_outer_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -250,14 +250,14 @@
     <visual>
       <origin xyz="0.04992 -0.281275 -0.147299" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/right_finger_inner_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/right_finger_inner_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin xyz="0.04992 -0.281275 -0.147299" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/right_finger_inner_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/right_finger_inner_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -272,14 +272,14 @@
     <visual>
       <origin xyz="-0.010062 -0.281275 -0.147299" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/right_finger_outer_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/right_finger_outer_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin xyz="-0.010062 -0.281275 -0.147299" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/right_finger_outer_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/right_finger_outer_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -298,14 +298,14 @@
     <visual>
       <origin xyz="0.073638 -0.18132 -0.03" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/base_motor_housing_linkage_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/base_motor_housing_linkage_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin xyz="0.073638 -0.18132 -0.03" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/base_motor_housing_linkage_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/base_motor_housing_linkage_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -320,14 +320,14 @@
     <visual>
       <origin xyz="0.05 -0.18875 -0.07" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/motor_housing_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/motor_housing_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin xyz="0.05 -0.18875 -0.07" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/motor_housing_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/motor_housing_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -342,14 +342,14 @@
     <visual>
       <origin xyz="0.152651 -0.33625 -0.052373" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/bench_stand_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/bench_stand_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin xyz="0.152651 -0.33625 -0.052373" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/bench_stand_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/bench_stand_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -364,14 +364,14 @@
     <visual>
       <origin xyz="0.152314 -0.341622 -0.064322" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/sensor_housing_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/sensor_housing_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin xyz="0.152314 -0.341622 -0.064322" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/sensor_housing_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/sensor_housing_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -386,14 +386,14 @@
     <visual>
       <origin xyz="-0.12 -0.16875 -0.03" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/conveyor_base_linkage_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/conveyor_base_linkage_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin xyz="-0.12 -0.16875 -0.03" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/conveyor_base_linkage_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/conveyor_base_linkage_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -408,14 +408,14 @@
     <visual>
       <origin xyz="0.1029 -0.24175 -0.0329" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/conveyor_linkage_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/conveyor_linkage_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin xyz="0.1029 -0.24175 -0.0329" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/conveyor_linkage_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/conveyor_linkage_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -430,14 +430,14 @@
     <visual>
       <origin xyz="0.1029 -0.25575 -0.0329" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/conveyor_belt_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/conveyor_belt_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin xyz="0.1029 -0.25575 -0.0329" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/conveyor_belt_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/conveyor_belt_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -452,14 +452,14 @@
     <visual>
       <origin xyz="0.173678 -0.24175 -0.052322" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/left_motor_shaft_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/left_motor_shaft_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin xyz="0.173678 -0.24175 -0.052322" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/left_motor_shaft_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/left_motor_shaft_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -474,14 +474,14 @@
     <visual>
       <origin xyz="0.173678 -0.27575 -0.052322" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/right_pulley_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/right_pulley_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin xyz="0.173678 -0.27575 -0.052322" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/right_pulley_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/right_pulley_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -496,14 +496,14 @@
     <visual>
       <origin xyz="-0.166124 -0.26175 -0.052322" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/right_pulley_shaft_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/right_pulley_shaft_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin xyz="-0.166124 -0.26175 -0.052322" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/right_pulley_shaft_link_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/right_pulley_shaft_link_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -518,14 +518,14 @@
     <visual>
       <origin xyz="-0.166124 -0.27575 -0.052322" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/right_pulley_link1_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/right_pulley_link1_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="silver"/>
     </visual>
     <collision>
       <origin xyz="-0.166124 -0.27575 -0.052322" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find ev3_manipulator)/meshes/right_pulley_link1_1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://ev3_manipulator/meshes/right_pulley_link1_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
