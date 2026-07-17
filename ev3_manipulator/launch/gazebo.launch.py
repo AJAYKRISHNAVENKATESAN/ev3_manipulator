@@ -379,7 +379,7 @@ def generate_launch_description():
         robot_state_publisher,
         spawn_node,
         gz_bridge,
-        #ev3_hardware_interface,
+        ev3_hardware_interface,
         delay_joint_state_broadcaster,
         conveyor_after_jsb,
         arm_after_conveyor,

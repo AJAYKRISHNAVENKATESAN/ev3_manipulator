@@ -118,7 +118,7 @@ arm_controller:
     allow_nonzero_velocity_at_trajectory_end: false
     open_loop_control: true
     allow_integration_in_goal_trajectories: true
-    action_monitor_rate: 1.0
+    action_monitor_rate: 20.0
 
 gripper_controller:
   ros__parameters:
