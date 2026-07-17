@@ -4,6 +4,8 @@
 # against the stack it was originally authored for.
 # On the host once per session, allow the container to use your display:
 #   xhost +local:root
+name: ev3-manipulator
+
 services:
   ev3-manipulator-dev:
     build:
