@@ -1,11 +1,11 @@
 # ev3_manipulator
 
-A robot arm that picks and sorts objects off a conveyor, built as a **digital
-twin**: the same sort-cycle logic runs in a Gazebo simulation and on a physical
-LEGO Mindstorms EV3 brick, synchronized over TCP so the two stay in lockstep.
-It's a ROS 2 (Humble/Jazzy) project covering URDF/xacro modeling, `ros2_control`,
-Gazebo simulation, and a custom handshake protocol talking to embedded
-`pybricks-micropython` on the EV3 hardware. Used as a git submodule in
+Stage-synchronized digital twin of a 2.5-DOF EV3 LEGO pick-and-place robot:
+the same sort-cycle logic runs in an Ignition Gazebo simulation and on a
+physical LEGO Mindstorms EV3 brick, kept in lockstep by TCP interlocks at
+every stage. Built with ROS 2 Humble — covering URDF/xacro modeling,
+`ros2_control`, Gazebo simulation, and a custom handshake protocol talking to
+embedded `pybricks-micropython` on the EV3 hardware. Used as a git submodule in
 [`project-drishti`](https://github.com/PavanSandaka/project-drishti) at
 `bots/ev3_manipulator`.
 
