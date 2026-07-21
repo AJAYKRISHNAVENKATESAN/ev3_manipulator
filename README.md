@@ -9,6 +9,10 @@ Gazebo simulation, and a custom handshake protocol talking to embedded
 [`project-drishti`](https://github.com/PavanSandaka/project-drishti) at
 `bots/ev3_manipulator`.
 
+Built as a master's project for my mechatronics professor, to get hands-on
+with ROS 2 and sim-to-real robotics — modeling a real arm, controlling it in
+simulation, and closing the loop with actual hardware over a custom protocol.
+
 https://github.com/user-attachments/assets/a11ed067-34a3-43b9-aa6a-01087d70825e
 
 ## Tech stack
@@ -81,3 +85,6 @@ own container/volumes, for tracking the newer Jazzy/Harmonic stack.
 See [`docker/isaac-sim/README.md`](docker/isaac-sim/README.md). On Blackwell
 (RTX 50-series) the host needs driver **580** — see
 [`docker/isaac-sim/DRIVER_DOWNGRADE.md`](https://github.com/PavanSandaka/project-drishti/blob/main/docker/isaac-sim/DRIVER_DOWNGRADE.md).
+
+## Author
+**Ajaykrishna Venkatesan** — [github.com/AJAYKRISHNAVENKATESAN](https://github.com/AJAYKRISHNAVENKATESAN) · aj.grizzy@gmail.com
