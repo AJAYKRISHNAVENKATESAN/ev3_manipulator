@@ -15,6 +15,26 @@ simulation, and closing the loop with actual hardware over a custom protocol.
 
 https://github.com/user-attachments/assets/a11ed067-34a3-43b9-aa6a-01087d70825e
 
+## Architecture
+```mermaid
+flowchart LR
+    subgraph ROS 2
+        SN["sorting_node<br/>(sort-cycle logic)"]
+        HI["hardware_interface<br/>(TCP bridge)"]
+        CM["ros2_control<br/>controller_manager"]
+    end
+    SIM["Gazebo sim<br/>(arm model)"]
+    BRICK["EV3 brick<br/>ev3_brick/sorting.py<br/>(pybricks-micropython)"]
+
+    SN -- "FollowJointTrajectory<br/>action" --> CM --> SIM
+    SN <-- "stage_event / stage_sync<br/>topics" --> HI
+    HI <-- "TCP handshake<br/>(homing, ready-to-pick,<br/>ready-to-place, cycle-done)" --> BRICK
+```
+`sorting_node` drives the sim arm directly via `ros2_control` and stays in
+sync with the physical arm through `hardware_interface`, which owns the TCP
+link to the EV3 brick. See [`ev3_brick/README.md`](ev3_brick/README.md) for
+the wire-level protocol.
+
 ## Tech stack
 - **ROS 2** (Humble by default, Jazzy supported) — `ros2_control`, URDF/xacro
 - **Gazebo** (Fortress/Ignition, or Harmonic on Jazzy) for simulation; **Isaac Sim 5.1** as an alternate sim backend
