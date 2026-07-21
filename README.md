@@ -37,7 +37,7 @@ colcon build && source install/setup.bash
 - **MoveIt 2 — to be explored in the near future.** `ev3_manipulator_moveit/`
   is experimental scaffolding, not yet wired into the sim/hardware sync above.
 
-<img width="1177" height="928" alt="image" src="https://github.com/user-attachments/assets/af0eb69b-a9ec-4078-b755-072b7889044f" />
+(https://github.com/AJAYKRISHNAVENKATESAN/ev3_manipulator/issues/4#issue-4940676569)
 
 
 ## Development environment (Docker)
