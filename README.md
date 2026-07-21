@@ -1,10 +1,23 @@
 # ev3_manipulator
 
-ROS 2 packages for the **EV3-brick Lego manipulator** — a robot arm that
-picks/sorts objects off a conveyor, synchronized between a Gazebo sim and the
-physical LEGO EV3 hardware. Used as a git submodule in
+A robot arm that picks and sorts objects off a conveyor, built as a **digital
+twin**: the same sort-cycle logic runs in a Gazebo simulation and on a physical
+LEGO Mindstorms EV3 brick, synchronized over TCP so the two stay in lockstep.
+It's a ROS 2 (Humble/Jazzy) project covering URDF/xacro modeling, `ros2_control`,
+Gazebo simulation, and a custom handshake protocol talking to embedded
+`pybricks-micropython` on the EV3 hardware. Used as a git submodule in
 [`project-drishti`](https://github.com/PavanSandaka/project-drishti) at
 `bots/ev3_manipulator`.
+
+https://github.com/user-attachments/assets/a11ed067-34a3-43b9-aa6a-01087d70825e
+
+## Tech stack
+- **ROS 2** (Humble by default, Jazzy supported) — `ros2_control`, URDF/xacro
+- **Gazebo** (Fortress/Ignition, or Harmonic on Jazzy) for simulation; **Isaac Sim 5.1** as an alternate sim backend
+- **Python** — the ROS-side `sorting_node` and `hardware_interface` nodes
+- **pybricks-micropython** — runs on the physical EV3 brick, talks to `hardware_interface` over a TCP handshake
+- **MoveIt 2** — scaffolded, not yet integrated (see Status below)
+- **Docker** — containerized, GPU-accelerated dev environments for every stack above
 
 ## Layout
 - **`ev3_manipulator/`** — ROS 2 package: URDF/xacro, meshes, Gazebo sim launch,
@@ -20,25 +33,30 @@ physical LEGO EV3 hardware. Used as a git submodule in
   targets an older URDF. Explored as future work, not part of the current
   sorting pipeline.
 
-## Build
+## Quickstart
 ```bash
-colcon build && source install/setup.bash
+git clone git@github.com:AJAYKRISHNAVENKATESAN/ev3_manipulator.git
+cd ev3_manipulator
 ```
+Then see [Development environment (Docker)](#development-environment-docker)
+below to build and launch the sim — requires a native Ubuntu host with an
+NVIDIA GPU and Docker (+
+[nvidia-container-toolkit](https://github.com/NVIDIA/nvidia-container-toolkit)).
+
+To run against real EV3 hardware instead of (or alongside) the sim, flash
+`ev3_brick/sorting.py` to the brick — see
+[`ev3_brick/README.md`](ev3_brick/README.md).
 
 ## Status / Roadmap
-- **Sim ↔ EV3 stage synchronization — active work.** `sorting_node.py` and the
-  brick's `ev3_brick/sorting.py` handshake at each stage of a sort cycle
-  (homing, ready-to-pick, ready-to-place, cycle-done) over the TCP link owned
-  by `hardware_interface.py`. This sync is still being fine-tuned — timing and
-  stage boundaries between the sim and the physical arm are an ongoing area of
-  tuning, not a finished/stable protocol yet. Both the sim and the physical
-  brick run their own sort cycle correctly in isolation; getting their timing
-  to line up stage-for-stage over the TCP handshake is the remaining work.
+- **Sim ↔ EV3 stage synchronization — active work.** Both the sim and the
+  physical brick run their own sort cycle correctly in isolation.
+  `sorting_node.py` and the brick's `ev3_brick/sorting.py` handshake at each
+  stage of a sort cycle (homing, ready-to-pick, ready-to-place, cycle-done)
+  over the TCP link owned by `hardware_interface.py`. Getting their timing to
+  line up stage-for-stage over that handshake is the remaining work — this
+  sync is still being fine-tuned, not a finished/stable protocol yet.
 - **MoveIt 2 — to be explored in the near future.** `ev3_manipulator_moveit/`
   is experimental scaffolding, not yet wired into the sim/hardware sync above.
-
-https://github.com/user-attachments/assets/a11ed067-34a3-43b9-aa6a-01087d70825e
-
 
 ## Development environment (Docker)
 
