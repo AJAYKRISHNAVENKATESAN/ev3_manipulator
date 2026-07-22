@@ -48,31 +48,23 @@ stateDiagram-v2
     [*] --> InitialHome
     InitialHome --> WaitBall
     WaitBall --> Spawn : colour detected
-    Spawn --> PickPlace : RED / BLUE
-    Spawn --> Reject : BLACK / GREEN
+    Spawn --> ConveyorToPickup : RED / BLUE
+    Spawn --> ConveyorEject : BLACK / GREEN
 
-    state PickPlace {
-        [*] --> ConveyorToPickup
-        ConveyorToPickup --> PickupReady
-        PickupReady --> PickDown
-        PickDown --> GripClose
-        GripClose --> PickUp
-        PickUp --> Rotate
-        Rotate --> PlaceDown
-        PlaceDown --> Release
-        Release --> PlaceUp
-        PlaceUp --> [*]
-    }
-
-    state Reject {
-        [*] --> ConveyorEject
-        ConveyorEject --> CenterHold
-        CenterHold --> [*]
-    }
-
-    PickPlace --> HomeAfterPick
-    Reject --> CycleComplete
+    ConveyorToPickup --> PickupReady
+    PickupReady --> PickDown
+    PickDown --> GripClose
+    GripClose --> PickUp
+    PickUp --> Rotate
+    Rotate --> PlaceDown
+    PlaceDown --> Release
+    Release --> PlaceUp
+    PlaceUp --> HomeAfterPick
     HomeAfterPick --> CycleComplete
+
+    ConveyorEject --> CenterHold
+    CenterHold --> CycleComplete
+
     CycleComplete --> WaitBall : more balls
     CycleComplete --> [*] : all balls sorted
 ```
