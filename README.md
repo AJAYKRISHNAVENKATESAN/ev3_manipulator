@@ -35,6 +35,35 @@ sync with the physical arm through `hardware_interface`, which owns the TCP
 link to the EV3 brick. See [`ev3_brick/README.md`](ev3_brick/README.md) for
 the wire-level protocol.
 
+Each stage above belongs to a per-cycle state machine — one pass through
+this for every ball/brick fed onto the conveyor:
+
+```mermaid
+stateDiagram-v2
+    [*] --> InitialHome
+    InitialHome --> WaitBall
+    WaitBall --> Spawn : colour detected
+    Spawn --> ConveyorToPickup : RED / BLUE
+    Spawn --> ConveyorEject : BLACK / GREEN
+
+    ConveyorToPickup --> PickupReady
+    PickupReady --> PickDown
+    PickDown --> GripClose
+    GripClose --> PickUp
+    PickUp --> Rotate
+    Rotate --> PlaceDown
+    PlaceDown --> Release
+    Release --> PlaceUp
+    PlaceUp --> HomeAfterPick
+    HomeAfterPick --> CycleComplete
+
+    ConveyorEject --> CenterHold
+    CenterHold --> CycleComplete
+
+    CycleComplete --> WaitBall : more balls
+    CycleComplete --> [*] : all balls sorted
+```
+
 ## Tech stack
 - **ROS 2** (Humble by default, Jazzy supported) — `ros2_control`, URDF/xacro
 - **Gazebo** (Fortress/Ignition, or Harmonic on Jazzy) for simulation; **Isaac Sim 5.1** as an alternate sim backend
