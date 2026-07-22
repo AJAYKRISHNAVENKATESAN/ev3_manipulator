@@ -40,6 +40,43 @@ TCP protocol** so the sim visually mirrors the real arm move-for-move.
  next stage / next cycle
 ```
 
+Each stage above belongs to a per-cycle state machine — one pass through
+this for every ball/brick fed onto the conveyor:
+
+```mermaid
+stateDiagram-v2
+    [*] --> InitialHome
+    InitialHome --> WaitBall
+    WaitBall --> Spawn : colour detected
+    Spawn --> PickPlace : RED / BLUE
+    Spawn --> Reject : BLACK / GREEN
+
+    state PickPlace {
+        [*] --> ConveyorToPickup
+        ConveyorToPickup --> PickupReady
+        PickupReady --> PickDown
+        PickDown --> GripClose
+        GripClose --> PickUp
+        PickUp --> Rotate
+        Rotate --> PlaceDown
+        PlaceDown --> Release
+        Release --> PlaceUp
+        PlaceUp --> [*]
+    }
+
+    state Reject {
+        [*] --> ConveyorEject
+        ConveyorEject --> CenterHold
+        CenterHold --> [*]
+    }
+
+    PickPlace --> HomeAfterPick
+    Reject --> CycleComplete
+    HomeAfterPick --> CycleComplete
+    CycleComplete --> WaitBall : more balls
+    CycleComplete --> [*] : all balls sorted
+```
+
 - **Where it lives:** the EV3 side is `ev3_manipulator/ev3_manipulator/sorting.py`
   (runs on the brick under pybricks); the ROS 2 side is
   `ev3_manipulator/ev3_manipulator/sorting_node.py` (runs on the dev host,
