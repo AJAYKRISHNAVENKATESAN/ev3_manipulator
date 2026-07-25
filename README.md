@@ -1,17 +1,23 @@
 # ev3_manipulator
 
-Stage-synchronized digital twin of a 2.5-DOF EV3 LEGO pick-and-place robot:
-the same sort-cycle logic runs in an Ignition Gazebo simulation and on a
-physical LEGO Mindstorms EV3 brick, kept in lockstep by TCP interlocks at
-every stage. Built with ROS 2 Humble — covering URDF/xacro modeling,
-`ros2_control`, Gazebo simulation, and a custom handshake protocol talking to
-embedded `pybricks-micropython` on the EV3 hardware. Used as a git submodule in
-[`project-drishti`](https://github.com/PavanSandaka/project-drishti) at
-`bots/ev3_manipulator`.
+Stage-synchronized digital twin of a 2.5-DOF EV3 LEGO pick-and-place robot.
 
-Built as a master's project for my mechatronics professor, to get hands-on
-with ROS 2 and sim-to-real robotics — modeling a real arm, controlling it in
-simulation, and closing the loop with actual hardware over a custom protocol.
+- **What it is:** the same sort-cycle logic runs both in an Ignition Gazebo
+  simulation and on a physical LEGO Mindstorms EV3 brick, kept in lockstep by
+  TCP interlocks at every stage.
+- **Stack:** ROS 2 Humble, URDF/xacro modeling, `ros2_control`, Gazebo
+  simulation, and a custom handshake protocol talking to embedded
+  `pybricks-micropython` on the EV3 hardware.
+- **Context:** used as a git submodule in
+  [`project-drishti`](https://github.com/PavanSandaka/project-drishti) at
+  `bots/ev3_manipulator`.
+- **Why:** built as a master's project for my mechatronics professor, to get
+  hands-on with ROS 2 and sim-to-real robotics — modeling a real arm,
+  controlling it in simulation, and closing the loop with actual hardware
+  over a custom protocol.
+
+![EV3 manipulator hardware showing the homing switches for the base and pickup-arm encoders](docs/images/manipulator_ev3.png)
+*Homing switches for the base and pickup-arm motors — pressing one gives that motor's encoder a known zero point to center its angle from.*
 
 https://github.com/user-attachments/assets/a11ed067-34a3-43b9-aa6a-01087d70825e
 
