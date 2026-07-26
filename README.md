@@ -1,10 +1,76 @@
 # ev3_manipulator
 
-ROS 2 packages for the **EV3-brick Lego manipulator** — a robot arm that
-picks/sorts objects off a conveyor, synchronized between a Gazebo sim and the
-physical LEGO EV3 hardware. Used as a git submodule in
+Stage-synchronized digital twin of a 2.5-DOF EV3 LEGO pick-and-place robot:
+the same sort-cycle logic runs in an Ignition Gazebo simulation and on a
+physical LEGO Mindstorms EV3 brick, kept in lockstep by TCP interlocks at
+every stage. Built with ROS 2 Humble — covering URDF/xacro modeling,
+`ros2_control`, Gazebo simulation, and a custom handshake protocol talking to
+embedded `pybricks-micropython` on the EV3 hardware. Used as a git submodule in
 [`project-drishti`](https://github.com/PavanSandaka/project-drishti) at
 `bots/ev3_manipulator`.
+
+Built as a master's project for my mechatronics professor, to get hands-on
+with ROS 2 and sim-to-real robotics — modeling a real arm, controlling it in
+simulation, and closing the loop with actual hardware over a custom protocol.
+
+https://github.com/user-attachments/assets/a11ed067-34a3-43b9-aa6a-01087d70825e
+
+## Architecture
+```mermaid
+flowchart LR
+    subgraph ROS 2
+        SN["sorting_node<br/>(sort-cycle logic)"]
+        HI["hardware_interface<br/>(TCP bridge)"]
+        CM["ros2_control<br/>controller_manager"]
+    end
+    SIM["Gazebo sim<br/>(arm model)"]
+    BRICK["EV3 brick<br/>ev3_brick/sorting.py<br/>(pybricks-micropython)"]
+
+    SN -- "FollowJointTrajectory<br/>action" --> CM --> SIM
+    SN <-- "stage_event / stage_sync<br/>topics" --> HI
+    HI <-- "TCP handshake<br/>(homing, ready-to-pick,<br/>ready-to-place, cycle-done)" --> BRICK
+```
+`sorting_node` drives the sim arm directly via `ros2_control` and stays in
+sync with the physical arm through `hardware_interface`, which owns the TCP
+link to the EV3 brick. See [`ev3_brick/README.md`](ev3_brick/README.md) for
+the wire-level protocol.
+
+Each stage above belongs to a per-cycle state machine — one pass through
+this for every ball/brick fed onto the conveyor:
+
+```mermaid
+stateDiagram-v2
+    [*] --> InitialHome
+    InitialHome --> WaitBall
+    WaitBall --> Spawn : colour detected
+    Spawn --> ConveyorToPickup : RED / BLUE
+    Spawn --> ConveyorEject : BLACK / GREEN
+
+    ConveyorToPickup --> PickupReady
+    PickupReady --> PickDown
+    PickDown --> GripClose
+    GripClose --> PickUp
+    PickUp --> Rotate
+    Rotate --> PlaceDown
+    PlaceDown --> Release
+    Release --> PlaceUp
+    PlaceUp --> HomeAfterPick
+    HomeAfterPick --> CycleComplete
+
+    ConveyorEject --> CenterHold
+    CenterHold --> CycleComplete
+
+    CycleComplete --> WaitBall : more balls
+    CycleComplete --> [*] : all balls sorted
+```
+
+## Tech stack
+- **ROS 2** (Humble by default, Jazzy supported) — `ros2_control`, URDF/xacro
+- **Gazebo** (Fortress/Ignition, or Harmonic on Jazzy) for simulation; **Isaac Sim 5.1** as an alternate sim backend
+- **Python** — the ROS-side `sorting_node` and `hardware_interface` nodes
+- **pybricks-micropython** — runs on the physical EV3 brick, talks to `hardware_interface` over a TCP handshake
+- **MoveIt 2** — scaffolded, not yet integrated (see Status below)
+- **Docker** — containerized, GPU-accelerated dev environments for every stack above
 
 ## Layout
 - **`ev3_manipulator/`** — ROS 2 package: URDF/xacro, meshes, Gazebo sim launch,
@@ -20,24 +86,30 @@ physical LEGO EV3 hardware. Used as a git submodule in
   targets an older URDF. Explored as future work, not part of the current
   sorting pipeline.
 
-## Build
+## Quickstart
 ```bash
-colcon build && source install/setup.bash
+git clone git@github.com:AJAYKRISHNAVENKATESAN/ev3_manipulator.git
+cd ev3_manipulator
 ```
+Then see [Development environment (Docker)](#development-environment-docker)
+below to build and launch the sim — requires a native Ubuntu host with an
+NVIDIA GPU and Docker (+
+[nvidia-container-toolkit](https://github.com/NVIDIA/nvidia-container-toolkit)).
+
+To run against real EV3 hardware instead of (or alongside) the sim, flash
+`ev3_brick/sorting.py` to the brick — see
+[`ev3_brick/README.md`](ev3_brick/README.md).
 
 ## Status / Roadmap
-- **Sim ↔ EV3 stage synchronization — active work.** `sorting_node.py` and the
-  brick's `ev3_brick/sorting.py` handshake at each stage of a sort cycle
-  (homing, ready-to-pick, ready-to-place, cycle-done) over the TCP link owned
-  by `hardware_interface.py`. This sync is still being fine-tuned — timing and
-  stage boundaries between the sim and the physical arm are an ongoing area of
-  tuning, not a finished/stable protocol yet. Both the sim and the physical
-  brick run their own sort cycle correctly in isolation; getting their timing
-  to line up stage-for-stage over the TCP handshake is the remaining work.
+- **Sim ↔ EV3 stage synchronization — active work.** Both the sim and the
+  physical brick run their own sort cycle correctly in isolation.
+  `sorting_node.py` and the brick's `ev3_brick/sorting.py` handshake at each
+  stage of a sort cycle (homing, ready-to-pick, ready-to-place, cycle-done)
+  over the TCP link owned by `hardware_interface.py`. Getting their timing to
+  line up stage-for-stage over that handshake is the remaining work — this
+  sync is still being fine-tuned, not a finished/stable protocol yet.
 - **MoveIt 2 — to be explored in the near future.** `ev3_manipulator_moveit/`
   is experimental scaffolding, not yet wired into the sim/hardware sync above.
-
-https://github.com/user-attachments/assets/9ebfe38d-4cc8-4826-ae7d-aa0d116ae9a8
 
 ## Development environment (Docker)
 
@@ -62,3 +134,6 @@ own container/volumes, for tracking the newer Jazzy/Harmonic stack.
 See [`docker/isaac-sim/README.md`](docker/isaac-sim/README.md). On Blackwell
 (RTX 50-series) the host needs driver **580** — see
 [`docker/isaac-sim/DRIVER_DOWNGRADE.md`](https://github.com/PavanSandaka/project-drishti/blob/main/docker/isaac-sim/DRIVER_DOWNGRADE.md).
+
+## Author
+**Ajaykrishna Venkatesan** — [github.com/AJAYKRISHNAVENKATESAN](https://github.com/AJAYKRISHNAVENKATESAN) · aj.grizzy@gmail.com

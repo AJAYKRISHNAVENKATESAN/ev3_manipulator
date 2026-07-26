@@ -4,8 +4,8 @@
 <name>ev3_manipulator</name>
   <version>0.0.0</version>
 <description>The ev3_manipulator package</description>
-  <maintainer email="todo@todo.com">author</maintainer>
-  <license>TODO: License declaration</license>
+  <maintainer email="aj.grizzy@gmail.com">AJAYKRISHNAVENKATESAN</maintainer>
+  <license>MIT</license>
 
   <depend>xacro</depend>
   <depend>rviz2</depend>

@@ -15,6 +15,8 @@ import queue
 import subprocess
 import threading
 import time
+import os
+import csv
 
 import rclpy
 from action_msgs.msg import GoalStatus
@@ -63,6 +65,10 @@ CLEARANCE_PITCH = 0.2
 SIM_GRIPPER_OPEN = 0.5
 SIM_GRIPPER_CLOSE = 0.0
 
+# Enable writing measured trajectory times to a CSV for easier analysis.
+SIM_LOG_TO_CSV = True
+SIM_TRAJ_CSV = "/tmp/sim_traj_times.csv"
+
 
 # ==================================================
 # ORIGINAL SIMULATION TIMINGS
@@ -70,39 +76,29 @@ SIM_GRIPPER_CLOSE = 0.0
 
 # Smooth homing trajectories use cumulative wall-clock targets.
 #
-# Measured physical EV3 values from previous runs:
-#   initial home       ~13.1 s
-#   home after RED     ~16.2 s
-#   home after BLUE    ~11.0 s
-# Tuned from the most recent synchronized timestamp log.
+# Measured physical EV3 values from the latest run:
+#   initial home       ~5.01 s hardware, ~6.3 s sim
+#   home after RED     ~6.43 s hardware, ~6.4 s sim
+#   home after BLUE    ~3.07 s hardware, ~5.9 s sim
 #
-# Latest measured gaps:
-#   HOME_INITIAL: sim 0.555 s late
-#   HOME_AFTER_RED: sim 1.771 s late
-#
-# HOME_AFTER_BLUE is based on the earlier valid blue-home measurement.
-# Retuned from the latest complete RED/GREEN/BLUE/BLACK run.
-#
-# Observed EV3 vs simulation homing durations:
-#   initial:    EV3 ~6.90 s, sim ~13.46 s
-#   after red:  EV3 ~9.28 s, sim ~15.35 s
-#   after blue: EV3 ~4.75 s, sim ~10.41 s
-#
-# Controller overhead adds roughly 0.9-1.3 s beyond the final trajectory time.
-SIM_HOME_INITIAL_TIMES = [0.6, 3.4, 5.6]
-SIM_HOME_AFTER_RED_TIMES = [5.4, 7.9]
-SIM_HOME_AFTER_BLUE_TIMES = [1.4, 3.8]
+# These values are tuned to keep Gazebo roughly aligned with the EV3
+# stage synchronization without overshooting the action timeout.
+# Initial homing is shaped to start briskly, then return at a more
+# natural speed instead of finishing too quickly.
+SIM_HOME_INITIAL_TIMES = [0.60, 4.20, 5.40]
+SIM_HOME_AFTER_RED_TIMES = [3.20, 6.40]
+SIM_HOME_AFTER_BLUE_TIMES = [2.93, 5.90]
 
-SIM_PICKUP_READY_TIME = 0.18
+SIM_PICKUP_READY_TIME = 0.16
 SIM_PICK_DOWN_TIME = 1.40
-SIM_PICK_UP_TIME = 0.85
+SIM_PICK_UP_TIME = 1.80
 
-SIM_ROTATE_RED_TIME = 0.65
-SIM_ROTATE_BLUE_TIME = 0.50
+SIM_ROTATE_RED_TIME = 1.75
+SIM_ROTATE_BLUE_TIME = 1.65
 
-SIM_DROP_DOWN_RED_TIME = 0.80
-SIM_DROP_DOWN_BLUE_TIME = 1.10
-SIM_DROP_UP_TIME = 1.60
+SIM_DROP_DOWN_RED_TIME = 2.42
+SIM_DROP_DOWN_BLUE_TIME = 2.62
+SIM_DROP_UP_TIME = 0.35
 
 SIM_REJECT_CENTER_HOLD_TIME = 0.25
 
@@ -850,6 +846,17 @@ class SortingNode(Node):
             goal.trajectory.points.append(point)
             previous_time = cumulative_time
 
+        # Log and timestamp when the trajectory is sent so we can measure
+        # how long Gazebo actually takes to complete the requested motion.
+        start_ts = time.time()
+
+        self.get_logger().info(
+            "Arm trajectory start: points={} expected_total={:.2f}s.".format(
+                len(goal.trajectory.points),
+                cumulative_times[-1],
+            )
+        )
+
         goal_future = self.arm_client.send_goal_async(goal)
 
         goal_handle = self.wait_for_future(
@@ -871,6 +878,66 @@ class SortingNode(Node):
             result_future,
             timeout_sec=cumulative_times[-1] + 5.0,
         )
+
+        elapsed = time.time() - start_ts
+
+        self.get_logger().info(
+            "Arm trajectory finished: elapsed={:.3f}s requested={:.2f}s status={}".format(
+                elapsed,
+                cumulative_times[-1],
+                wrapped_result.status,
+            )
+        )
+
+        # Optionally append measured trajectory timing to CSV for analysis.
+        if SIM_LOG_TO_CSV:
+            try:
+                write_header = not os.path.exists(SIM_TRAJ_CSV)
+
+                try:
+                    cycle_id = ""
+                    seq_id = ""
+                    stage_name = ""
+
+                    if getattr(self, "active_key", None):
+                        try:
+                            cycle_id, seq_id, stage_name = self.active_key
+                        except Exception:
+                            cycle_id = seq_id = stage_name = ""
+
+                    with open(SIM_TRAJ_CSV, "a", newline="") as csvf:
+                        writer = csv.writer(csvf)
+
+                        if write_header:
+                            writer.writerow([
+                                "ts",
+                                "cycle",
+                                "seq",
+                                "stage",
+                                "points",
+                                "requested_s",
+                                "elapsed_s",
+                                "status",
+                            ])
+
+                        writer.writerow([
+                            time.time(),
+                            cycle_id,
+                            seq_id,
+                            stage_name,
+                            len(goal.trajectory.points),
+                            float(cumulative_times[-1]),
+                            float(elapsed),
+                            int(wrapped_result.status),
+                        ])
+                except Exception as e:
+                    self.get_logger().warn(
+                        "Failed to write sim trajectory CSV row: {}".format(e)
+                    )
+
+            except Exception:
+                # Never let CSV logging break the main flow.
+                pass
 
         if (
             wrapped_result.status

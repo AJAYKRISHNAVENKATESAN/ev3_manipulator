@@ -1,7 +1,9 @@
+# Standalone dev tool, not a ROS package — run from the repo root with
+# `python3 tools/trim.py` (requires `pip install trimesh`, not a colcon dep).
 import trimesh
 
 # Load the conveyor belt mesh from the meshes folder
-mesh = trimesh.load('meshes/conveyor_belt_link_1.stl')
+mesh = trimesh.load('ev3_manipulator/meshes/conveyor_belt_link_1.stl')
 
 # 1. Get the exact dimensions of the bounding box (X, Y, Z)
 box_size = mesh.bounding_box.extents
