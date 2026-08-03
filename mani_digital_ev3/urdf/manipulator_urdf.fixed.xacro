@@ -1,0 +1,757 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="mani_digital_ev3">
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+        WORLD ANCHOR — fixes base_link so the arm does not drift/fall.
+    ══════════════════════════════════════════════════════════════════════ -->
+    <link name="world"/>
+    <joint name="world_to_base_fixed" type="fixed">
+      <parent link="world"/>
+      <child link="base_link"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </joint>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+        LINKS (unchanged from source design)
+    ══════════════════════════════════════════════════════════════════════ -->
+
+    <link name="base_link">
+      <inertial>
+        <origin xyz="-0.0160219776917477 -0.022349645623374687 0.05377550919707505" rpy="0 0 0"/>
+        <mass value="16.036977649695107"/>
+        <inertia ixx="0.075521" iyy="0.053463" izz="0.105222" ixy="-0.003137" iyz="0.009156" ixz="-0.000793"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="silver"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="left_pulley_link_1">
+      <inertial>
+        <origin xyz="-4.1870103426044913e-07 0.025000000000000022 -6.805760178682507e-08" rpy="0 0 0"/>
+        <mass value="0.445090771693224"/>
+        <inertia ixx="0.000133" iyy="8e-05" izz="0.000133" ixy="-0.0" iyz="0.0" ixz="0.0"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.17368 -0.2065 -0.025831" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/left_pulley_link_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="silver"/>
+      </visual>
+      <collision>
+        <origin xyz="0.17368 -0.2065 -0.025831" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/left_pulley_link_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="bench_support_left_pulley_link_1">
+      <inertial>
+        <origin xyz="0.0006055812991640486 2.7755575615628914e-17 -0.0018960680575384192" rpy="0 0 0"/>
+        <mass value="0.0012708460791795231"/>
+        <inertia ixx="1.91553026e-08" iyy="2.51510583e-09" izz="1.91553011e-08" ixy="-1.30057964e-20" iyz="-0" ixz="-5.03178818e-16"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.174286 -0.2 -0.027727" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/bench_support_left_pulley_link_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="silver"/>
+      </visual>
+      <collision>
+        <origin xyz="0.174286 -0.2 -0.027727" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/bench_support_left_pulley_link_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="left_outer_finger_1">
+      <inertial>
+        <origin xyz="0.005569608610650713 0.003500284708247481 -0.017629976135611264" rpy="0 0 0"/>
+        <mass value="0.00755966365274713"/>
+        <inertia ixx="1e-06" iyy="1e-06" izz="0.0" ixy="0.0" iyz="-0.0" ixz="0.0"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.009739 -0.246759 -0.087252" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/left_outer_finger_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="silver"/>
+      </visual>
+      <collision>
+        <origin xyz="0.009739 -0.246759 -0.087252" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/left_outer_finger_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="left_inner_finger_1">
+      <inertial>
+        <origin xyz="-0.005569684240822555 0.003500284708247481 -0.01762997613561125" rpy="0 0 0"/>
+        <mass value="0.007559663652747128"/>
+        <inertia ixx="1e-06" iyy="1e-06" izz="0.0" ixy="0.0" iyz="0.0" ixz="-0.0"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.034739 -0.246759 -0.087252" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/left_inner_finger_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="silver"/>
+      </visual>
+      <collision>
+        <origin xyz="0.034739 -0.246759 -0.087252" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/left_inner_finger_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="left_gear_1">
+      <inertial>
+        <origin xyz="0.00012451702585636673 0.0028984491930627576 -0.00013396951961128223" rpy="0 0 0"/>
+        <mass value="0.006872239450600996"/>
+        <inertia ixx="1.13491425e-07" iyy="1.98389214e-07" izz="1.13491365e-07" ixy="3.35932744e-16" iyz="-2.74751929e-16" ixz="-1.46918928e-12"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.022472 -0.241193 -0.08328" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/left_gear_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="silver"/>
+      </visual>
+      <collision>
+        <origin xyz="0.022472 -0.241193 -0.08328" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/left_gear_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="right_gear_1">
+      <inertial>
+        <origin xyz="0.00012451702585637367 -0.0021058797765677872 -0.00013396951961013037" rpy="0 0 0"/>
+        <mass value="0.006872239450601031"/>
+        <inertia ixx="1.1349142e-07" iyy="1.98389206e-07" izz="1.13491363e-07" ixy="-3.37244565e-16" iyz="2.7540135e-16" ixz="-1.46974207e-12"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.022472 -0.227193 -0.08328" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/right_gear_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="silver"/>
+      </visual>
+      <collision>
+        <origin xyz="0.022472 -0.227193 -0.08328" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/right_gear_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="right_inner_finger_1">
+      <inertial>
+        <origin xyz="-0.005569684240822555 -0.003499715291752553 -0.01762997613561125" rpy="0 0 0"/>
+        <mass value="0.007559663652747128"/>
+        <inertia ixx="1e-06" iyy="1e-06" izz="0.0" ixy="0.0" iyz="0.0" ixz="-0.0"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.034739 -0.221759 -0.087252" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/right_inner_finger_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="silver"/>
+      </visual>
+      <collision>
+        <origin xyz="0.034739 -0.221759 -0.087252" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/right_inner_finger_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="right_outer_finger_1">
+      <inertial>
+        <origin xyz="0.005569608610650713 -0.0034997152917525254 -0.017629976135611264" rpy="0 0 0"/>
+        <mass value="0.00755966365274713"/>
+        <inertia ixx="1e-06" iyy="1e-06" izz="0.0" ixy="0.0" iyz="0.0" ixz="0.0"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.009739 -0.221759 -0.087252" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/right_outer_finger_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="silver"/>
+      </visual>
+      <collision>
+        <origin xyz="0.009739 -0.221759 -0.087252" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/right_outer_finger_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="motor_shaft_arm_4_outer_gripper_1">
+      <inertial>
+        <origin xyz="0.002623887492486241 -0.0001355345933045926 -0.0033719126947187317" rpy="0 0 0"/>
+        <mass value="0.018260350222549068"/>
+        <inertia ixx="2e-06" iyy="1e-06" izz="1e-06" ixy="-0.0" iyz="-0.0" ixz="0.0"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.012364 -0.234693 -0.105268" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/motor_shaft_arm_4_outer_gripper_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="silver"/>
+      </visual>
+      <collision>
+        <origin xyz="0.012364 -0.234693 -0.105268" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/motor_shaft_arm_4_outer_gripper_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="motor_shaft_arm_4_inner_gripper_1">
+      <inertial>
+        <origin xyz="-0.0023751500221250027 -0.00013656306375253724 -0.0033781785171197037" rpy="0 0 0"/>
+        <mass value="0.018225081744171055"/>
+        <inertia ixx="2e-06" iyy="1e-06" izz="1e-06" ixy="0.0" iyz="-0.0" ixz="-0.0"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.032364 -0.234693 -0.105268" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/motor_shaft_arm_4_inner_gripper_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="silver"/>
+      </visual>
+      <collision>
+        <origin xyz="0.032364 -0.234693 -0.105268" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/motor_shaft_arm_4_inner_gripper_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="arm_2_arm_3_link_1">
+      <inertial>
+        <origin xyz="0.002498626800484627 0.000569167166781126 -0.03241875501615518" rpy="0 0 0"/>
+        <mass value="0.009030618483116344"/>
+        <inertia ixx="4e-06" iyy="4e-06" izz="0.0" ixy="0.0" iyz="0.0" ixz="-0.0"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.030125 -0.221446 -0.162014" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/arm_2_arm_3_link_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="silver"/>
+      </visual>
+      <collision>
+        <origin xyz="0.030125 -0.221446 -0.162014" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/arm_2_arm_3_link_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="arm_4_1">
+      <inertial>
+        <origin xyz="0.005283879785144451 0.010136163479566834 -0.027576809550981185" rpy="0 0 0"/>
+        <mass value="0.21420174241537746"/>
+        <inertia ixx="9.8e-05" iyy="9.8e-05" izz="1.4e-05" ixy="0.0" iyz="-0.0" ixz="1e-06"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.027607 -0.223961 -0.152886" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/arm_4_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="silver"/>
+      </visual>
+      <collision>
+        <origin xyz="0.027607 -0.223961 -0.152886" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/arm_4_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="sensor_housing_arm_2_1">
+      <inertial>
+        <origin xyz="-0.00014717174759914728 0.002929790206148905 0.010291752985168545" rpy="0 0 0"/>
+        <mass value="0.11085902281218155"/>
+        <inertia ixx="1.8e-05" iyy="8e-06" izz="1.8e-05" ixy="-0.0" iyz="0.0" ixz="-0.0"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.025125 -0.071803 -0.163514" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/sensor_housing_arm_2_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="silver"/>
+      </visual>
+      <collision>
+        <origin xyz="0.025125 -0.071803 -0.163514" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/sensor_housing_arm_2_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="arm2_end_support_1">
+      <inertial>
+        <origin xyz="0.019958769673068796 -0.05018269547070976 0.011594453409296213" rpy="0 0 0"/>
+        <mass value="0.2772468197661841"/>
+        <inertia ixx="0.000685" iyy="0.000119" izz="0.000734" ixy="0.0" iyz="8.9e-05" ixz="-0.0"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.045125 -0.036446 -0.163514" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/arm2_end_support_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="silver"/>
+      </visual>
+      <collision>
+        <origin xyz="0.045125 -0.036446 -0.163514" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/arm2_end_support_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="arm_2_1">
+      <inertial>
+        <origin xyz="0.015000370299066746 0.08279315662735762 0.0035990685317242865" rpy="0 0 0"/>
+        <mass value="0.2509640057596246"/>
+        <inertia ixx="0.000606" iyy="5.1e-05" izz="0.00065" ixy="-0.0" iyz="2e-06" ixz="0.0"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.040125 -0.0365 -0.155" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/arm_2_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="silver"/>
+      </visual>
+      <collision>
+        <origin xyz="0.040125 -0.0365 -0.155" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/arm_2_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="arm_1_1">
+      <inertial>
+        <origin xyz="-0.008357240192383424 -0.010808934376611831 0.0742741374183016" rpy="0 0 0"/>
+        <mass value="0.12301959228362178"/>
+        <inertia ixx="9.3e-05" iyy="6e-05" izz="4.8e-05" ixy="3e-06" iyz="2.6e-05" ixz="-0.0"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.02 -0.104 -0.04" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/arm_1_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="silver"/>
+      </visual>
+      <collision>
+        <origin xyz="0.02 -0.104 -0.04" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/arm_1_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="sensor_housing_link_1">
+      <inertial>
+        <origin xyz="0.004130724597983776 0.005027483357744833 0.012262302010969423" rpy="0 0 0"/>
+        <mass value="0.038441541631009796"/>
+        <inertia ixx="2e-06" iyy="2e-06" izz="2e-06" ixy="0.0" iyz="-0.0" ixz="0.0"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.162922 -0.276872 -0.038227" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/sensor_housing_link_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="silver"/>
+      </visual>
+      <collision>
+        <origin xyz="0.162922 -0.276872 -0.038227" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/sensor_housing_link_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="bench_stand_link_1">
+      <inertial>
+        <origin xyz="0.15280775727335036 0.005364427199206989 0.005095187519893098" rpy="0 0 0"/>
+        <mass value="0.07845672976126677"/>
+        <inertia ixx="3e-06" iyy="0.000774" izz="0.000771" ixy="-0.0" iyz="0.0" ixz="-0.0"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.16326 -0.2715 -0.026278" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/bench_stand_link_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="silver"/>
+      </visual>
+      <collision>
+        <origin xyz="0.16326 -0.2715 -0.026278" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/bench_stand_link_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="right_pulley_link_1">
+      <inertial>
+        <origin xyz="-1.8424994036037035e-07 0.024895021640257142 3.6538564119822925e-07" rpy="0 0 0"/>
+        <mass value="0.44047475101781797"/>
+        <inertia ixx="0.000132" iyy="8e-05" izz="0.000132" ixy="0.0" iyz="-0.0" ixz="0.0"/>
+      </inertial>
+      <visual>
+        <origin xyz="-0.166124 -0.208 -0.025822" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/right_pulley_link_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="silver"/>
+      </visual>
+      <collision>
+        <origin xyz="-0.166124 -0.208 -0.025822" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/right_pulley_link_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="bench_support_right_pulley_link_1">
+      <inertial>
+        <origin xyz="0.00783933282804139 0.0015000000000000013 4.66098237030671e-07" rpy="0 0 0"/>
+        <mass value="0.0016349535209761123"/>
+        <inertia ixx="3.38701602e-09" iyy="4.49777762e-08" izz="4.40431904e-08" ixy="-4.48117608e-19" iyz="-1.08782173e-19" ixz="-1.47458294e-16"/>
+      </inertial>
+      <visual>
+        <origin xyz="-0.151124 -0.205 -0.025822" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/bench_support_right_pulley_link_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="silver"/>
+      </visual>
+      <collision>
+        <origin xyz="-0.151124 -0.205 -0.025822" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/bench_support_right_pulley_link_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="bench_support_link_1">
+      <inertial>
+        <origin xyz="-0.13374945722206916 0.03451630554656637 0.0004651886986172041" rpy="0 0 0"/>
+        <mass value="0.25317449429752614"/>
+        <inertia ixx="0.00027" iyy="0.002419" izz="0.002688" ixy="-1.3e-05" iyz="-4e-06" ixz="0.0"/>
+      </inertial>
+      <visual>
+        <origin xyz="-0.115839 -0.195 -0.025228" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/bench_support_link_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="silver"/>
+      </visual>
+      <collision>
+        <origin xyz="-0.115839 -0.195 -0.025228" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/bench_support_link_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="base_link_bench_support_link_1">
+      <inertial>
+        <origin xyz="0.009979368863052757 0.01737698381872657 -5.60019084087926e-06" rpy="0 0 0"/>
+        <mass value="0.056383212831862886"/>
+        <inertia ixx="6e-06" iyy="4e-06" izz="9e-06" ixy="0.0" iyz="0.0" ixz="0.0"/>
+      </inertial>
+      <visual>
+        <origin xyz="-0.105 -0.16 -0.025" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/base_link_bench_support_link_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="silver"/>
+      </visual>
+      <collision>
+        <origin xyz="-0.105 -0.16 -0.025" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/base_link_bench_support_link_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="base_motor_housing_1">
+      <inertial>
+        <origin xyz="-0.06971366424813556 0.023738282395556864 0.027081375272231572" rpy="0 0 0"/>
+        <mass value="2.55285061461731"/>
+        <inertia ixx="0.001201" iyy="0.008881" izz="0.00853" ixy="-0.000178" iyz="-2.7e-05" ixz="-0.001068"/>
+      </inertial>
+      <visual>
+        <origin xyz="-0.0 -0.14 -0.02" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/base_motor_housing_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="silver"/>
+      </visual>
+      <collision>
+        <origin xyz="-0.0 -0.14 -0.02" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/base_motor_housing_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="conveyor_belt_link_1">
+      <inertial>
+        <origin xyz="0.09885577098748011 0.08312907654316704 0.012944406589581724" rpy="0 0 0"/>
+        <mass value="0.31573416000792753"/>
+        <inertia ixx="0.00018" iyy="0.004287" izz="0.004245" ixy="-5e-06" iyz="-1e-06" ixz="-2e-06"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.102917 -0.149705 -0.01" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/conveyor_belt_link_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="silver"/>
+      </visual>
+      <collision>
+        <origin xyz="0.102917 -0.149705 -0.01" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find mani_digital_ev3)/meshes/conveyor_belt_link_1.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+        ARM JOINTS (driven + parallelogram mimic)
+    ══════════════════════════════════════════════════════════════════════ -->
+
+    <!-- Motor A: base rotation (driven) -->
+    <joint name="arm1_base_link_joint" type="revolute">
+      <origin xyz="-0.02 0.104 0.04" rpy="0 0 0"/>
+      <parent link="base_link"/>
+      <child link="arm_1_1"/>
+      <axis xyz="0.0 0.0 -1.0"/>
+      <limit lower="-3.14159" upper="3.14159" effort="80" velocity="3"/>
+      <dynamics damping="2.0" friction="0.5"/>
+    </joint>
+
+    <!-- Motor B: arm pitch (driven) — pitches up/down -->
+    <joint name="arm1_arm2_joint" type="revolute">
+      <origin xyz="-0.020125 -0.0675 0.115" rpy="0 0 0"/>
+      <parent link="arm_1_1"/>
+      <child link="arm_2_1"/>
+      <axis xyz="-1.0 0.0 0.0"/>
+      <limit lower="-1.5708" upper="1.5708" effort="50" velocity="3"/>
+      <dynamics damping="1.5" friction="0.05"/>
+    </joint>
+
+    <!-- Parallelogram wrist: mimics pitch in the OPPOSITE direction (-1) -->
+    <joint name="arm_2_3_connector_arm_2_joint" type="revolute">
+      <origin xyz="0.01 0.184946 0.007014" rpy="0 0 0"/>
+      <parent link="arm_2_1"/>
+      <child link="arm_2_arm_3_link_1"/>
+      <axis xyz="-1.0 0.0 0.0"/>
+      <limit lower="-1.5708" upper="1.5708" effort="50" velocity="1.5"/>
+      <dynamics damping="1.0" friction="0.2"/>
+      <mimic joint="arm1_arm2_joint" multiplier="-1" offset="0"/>
+    </joint>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+        GRIPPER JOINTS — master + followers (all mimic left_gear_arm4_joint, -1)
+        Finger limits: wide (extreme- to extreme+).
+        If the RIGHT fingers open when they should close, flip the three
+        right-side mimic joints to multiplier +1 and rebuild.
+    ══════════════════════════════════════════════════════════════════════ -->
+
+    <!-- Motor C: gripper master (driven) -->
+    <joint name="left_gear_arm4_joint" type="revolute">
+      <origin xyz="0.005135 0.017232 -0.069606" rpy="0 0 0"/>
+      <parent link="arm_4_1"/>
+      <child link="left_gear_1"/>
+      <axis xyz="0.0 -1.0 0.0"/>
+      <limit lower="-0.8" upper="0.8" effort="15" velocity="2.0"/>
+      <dynamics damping="0.1" friction="0.005"/>
+    </joint>
+
+    <!-- Right gear: FLIP to +1 if right side opens instead of closes -->
+    <joint name="right_gear_arm4_joint" type="revolute">
+      <origin xyz="0.005135 0.003232 -0.069606" rpy="0 0 0"/>
+      <parent link="arm_4_1"/>
+      <child link="right_gear_1"/>
+      <axis xyz="0.0 -1.0 0.0"/>
+      <limit lower="-1.5708" upper="1.5708" effort="15" velocity="2.0"/>
+      <dynamics damping="0.1" friction="0.005"/>
+      <mimic joint="left_gear_arm4_joint" multiplier="-1" offset="0"/>
+    </joint>
+
+    <joint name="left_inner_finger_arm4_joint" type="revolute">
+      <origin xyz="-0.002375 0.012066 -0.018016" rpy="0 0 0"/>
+      <parent link="motor_shaft_arm_4_inner_gripper_1"/>
+      <child link="left_inner_finger_1"/>
+      <axis xyz="0.0 1.0 0.0"/>
+      <limit lower="-1.5708" upper="1.5708" effort="10" velocity="2.0"/>
+      <dynamics damping="0.05" friction="0.001"/>
+      <mimic joint="left_gear_arm4_joint" multiplier="-1" offset="0"/>
+    </joint>
+
+    <joint name="left_outer_finger_arm4_joint" type="revolute">
+      <origin xyz="0.002625 0.012066 -0.018016" rpy="0 0 0"/>
+      <parent link="motor_shaft_arm_4_outer_gripper_1"/>
+      <child link="left_outer_finger_1"/>
+      <axis xyz="0.0 1.0 0.0"/>
+      <limit lower="-1.5708" upper="1.5708" effort="10" velocity="2.0"/>
+      <dynamics damping="0.05" friction="0.001"/>
+      <mimic joint="left_gear_arm4_joint" multiplier="-1" offset="0"/>
+    </joint>
+
+    <!-- Right inner finger: FLIP to +1 with the right side if needed -->
+    <joint name="right_inner_finger_arm4_joint" type="revolute">
+      <origin xyz="-0.002375 -0.012934 -0.018016" rpy="0 0 0"/>
+      <parent link="motor_shaft_arm_4_inner_gripper_1"/>
+      <child link="right_inner_finger_1"/>
+      <axis xyz="0.0 -1.0 0.0"/>
+      <limit lower="-1.5708" upper="1.5708" effort="10" velocity="2.0"/>
+      <dynamics damping="0.05" friction="0.001"/>
+      <mimic joint="left_gear_arm4_joint" multiplier="-1" offset="0"/>
+    </joint>
+
+    <!-- Right outer finger: FLIP to +1 with the right side if needed -->
+    <joint name="right_outer_finger_arm4_joint" type="revolute">
+      <origin xyz="0.002625 -0.012934 -0.018016" rpy="0 0 0"/>
+      <parent link="motor_shaft_arm_4_outer_gripper_1"/>
+      <child link="right_outer_finger_1"/>
+      <axis xyz="0.0 -1.0 0.0"/>
+      <limit lower="-1.5708" upper="1.5708" effort="10" velocity="2.0"/>
+      <dynamics damping="0.05" friction="0.001"/>
+      <mimic joint="left_gear_arm4_joint" multiplier="-1" offset="0"/>
+    </joint>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+        GRIPPER FIXED MOUNTS
+    ══════════════════════════════════════════════════════════════════════ -->
+
+    <joint name="motor_shaft_outer_gripper_arm_4_joint" type="fixed">
+      <origin xyz="0.015243 0.010732 -0.047618" rpy="0 0 0"/>
+      <parent link="arm_4_1"/>
+      <child link="motor_shaft_arm_4_outer_gripper_1"/>
+    </joint>
+
+    <joint name="motor_shaft_inner_gripper_arm_4_joint" type="fixed">
+      <origin xyz="-0.004757 0.010732 -0.047618" rpy="0 0 0"/>
+      <parent link="arm_4_1"/>
+      <child link="motor_shaft_arm_4_inner_gripper_1"/>
+    </joint>
+
+    <joint name="arm_2_3_connector_arm_4_joint" type="fixed">
+      <origin xyz="0.002518 0.002515 -0.009128" rpy="0 0 0"/>
+      <parent link="arm_2_arm_3_link_1"/>
+      <child link="arm_4_1"/>
+    </joint>
+
+    <joint name="arm_sensor_joint" type="fixed">
+      <origin xyz="0.015 0.035303 0.008514" rpy="0 0 0"/>
+      <parent link="arm_2_1"/>
+      <child link="sensor_housing_arm_2_1"/>
+    </joint>
+
+    <joint name="arm2_support_arm_joint" type="fixed">
+      <origin xyz="-0.005 -5.4e-05 0.008514" rpy="0 0 0"/>
+      <parent link="arm_2_1"/>
+      <child link="arm2_end_support_1"/>
+    </joint>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+        CONVEYOR JOINTS
+        'Revolute 1' renamed -> 'conveyor_left_pulley_joint'. Cosmetic.
+    ══════════════════════════════════════════════════════════════════════ -->
+
+    <!-- Motor D: conveyor drive (driven, velocity) -->
+    <joint name="conveyor_left_pulley_joint" type="continuous">
+      <origin xyz="0.000606 0.0065 -0.001896" rpy="0 0 0"/>
+      <parent link="bench_support_left_pulley_link_1"/>
+      <child link="left_pulley_link_1"/>
+      <axis xyz="0.0 1.0 0.0"/>
+      <dynamics damping="0.1" friction="0.01"/>
+    </joint>
+
+    <joint name="right_pulley_bench_support_conector_joint" type="continuous">
+      <origin xyz="0.015 0.003 0.0" rpy="0 0 0"/>
+      <parent link="bench_support_right_pulley_link_1"/>
+      <child link="right_pulley_link_1"/>
+      <axis xyz="0.0 -1.0 0.0"/>
+      <dynamics damping="0.1" friction="0.01"/>
+      <mimic joint="conveyor_left_pulley_joint" multiplier="-1" offset="0"/>
+    </joint>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+        REMAINING FIXED STRUCTURE (unchanged from source)
+    ══════════════════════════════════════════════════════════════════════ -->
+
+    <joint name="Rigid 2" type="fixed">
+      <origin xyz="-0.290125 0.005 0.002499" rpy="0 0 0"/>
+      <parent link="bench_support_link_1"/>
+      <child link="bench_support_left_pulley_link_1"/>
+    </joint>
+
+    <joint name="base_link_base_link_bench_support_linkage_joint" type="fixed">
+      <origin xyz="0.105 0.16 0.025" rpy="0 0 0"/>
+      <parent link="base_link"/>
+      <child link="base_link_bench_support_link_1"/>
+    </joint>
+
+    <joint name="base_loink_linkage_bench_support_joint" type="fixed">
+      <origin xyz="0.010839 0.035 0.000228" rpy="0 0 0"/>
+      <parent link="base_link_bench_support_link_1"/>
+      <child link="bench_support_link_1"/>
+    </joint>
+
+    <joint name="bench_stand_bench_support_joint" type="fixed">
+      <origin xyz="-0.279099 0.0765 0.00105" rpy="0 0 0"/>
+      <parent link="bench_support_link_1"/>
+      <child link="bench_stand_link_1"/>
+    </joint>
+
+    <joint name="color_sensor_bench_joint" type="fixed">
+      <origin xyz="0.000338 0.005372 0.011949" rpy="0 0 0"/>
+      <parent link="bench_stand_link_1"/>
+      <child link="sensor_housing_link_1"/>
+    </joint>
+
+    <joint name="right_pulley_bench_support_link_bench_support_joint" type="fixed">
+      <origin xyz="0.035285 0.01 0.000594" rpy="0 0 0"/>
+      <parent link="bench_support_link_1"/>
+      <child link="bench_support_right_pulley_link_1"/>
+    </joint>
+
+    <joint name="base_motor_housing_base_link_joint" type="fixed">
+      <origin xyz="0.0 0.14 0.02" rpy="0 0 0"/>
+      <parent link="base_link"/>
+      <child link="base_motor_housing_1"/>
+    </joint>
+
+    <joint name="conveyor_belt_base_link_joint" type="fixed">
+      <origin xyz="-0.102917 0.149705 0.01" rpy="0 0 0"/>
+      <parent link="base_link"/>
+      <child link="conveyor_belt_link_1"/>
+    </joint>
+
+</robot>

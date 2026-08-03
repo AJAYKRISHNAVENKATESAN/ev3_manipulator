@@ -1,0 +1,76 @@
+# controller_manager:
+#   ros__parameters:
+#     update_rate: 1000          # matches your fast_physics.sdf 0.001s step
+
+#     joint_state_broadcaster:
+#       type: joint_state_broadcaster/JointStateBroadcaster
+
+#     arm_controller:
+#       type: joint_trajectory_controller/JointTrajectoryController
+
+#     gripper_controller:
+#       type: position_controllers/JointGroupPositionController
+
+#     conveyor_controller:
+#       type: velocity_controllers/JointGroupVelocityController
+
+# arm_controller:
+#   ros__parameters:
+#     joints:
+#       - arm1_base_link_joint          # was: arm_1_base_link_joint
+#       - arm1_arm2_joint               # was: arm_2_left_arm_linkage_joint  (pitch)
+#     command_interfaces: [position]
+#     state_interfaces: [position, velocity]
+#     allow_nonzero_velocity_at_trajectory_end: false
+#     open_loop_control: true
+#     allow_integration_in_goal_trajectories: true
+#     action_monitor_rate: 20.0
+
+# gripper_controller:
+#   ros__parameters:
+#     joints:
+#       - left_gear_arm4_joint          # was: left_gear_arm_3_joint
+#     command_interfaces: [position]
+#     state_interfaces: [position]
+
+# conveyor_controller:
+#   ros__parameters:
+#     joints:
+#       - conveyor_left_pulley_joint    # was: left_pulley_shaft_motor_housing_shaft (renamed from 'Revolute 1')
+#     command_interfaces: [velocity]
+#     state_interfaces: [position, velocity]
+
+
+
+
+controller_manager:
+  ros__parameters:
+    # 100 Hz is enough for an EV3 stream around 20–50 Hz.
+    # You can use 1000 only if Gazebo and your computer reliably sustain it.
+    update_rate: 100
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    # Directly mirrors EV3 base, arm and gripper positions.
+    twin_position_controller:
+      type: position_controllers/JointGroupPositionController
+
+    # Rotates the visible conveyor pulley.
+    # conveyor_controller:
+    #   type: velocity_controllers/JointGroupVelocityController
+
+
+# Order must exactly match position_joints in gazebo_state_mirror.py.
+twin_position_controller:
+  ros__parameters:
+    joints:
+      - arm1_base_link_joint
+      - arm1_arm2_joint
+      - left_gear_arm4_joint
+
+
+# conveyor_controller:
+#   ros__parameters:
+#     joints:
+#       - conveyor_left_pulley_joint
