@@ -1,6 +1,14 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="mani_digital_ev3">
 
+    <xacro:property name="belt_surface_length" value="0.34"/>
+    <xacro:property name="belt_surface_width" value="0.05"/>
+    <xacro:property name="belt_surface_thickness" value="0.001"/>
+
+    <xacro:property name="belt_surface_x" value="0.102917"/>
+    <xacro:property name="belt_surface_y" value="0.083295"/>
+    <xacro:property name="belt_surface_z" value="0.033500"/>
+
     <!-- ══════════════════════════════════════════════════════════════════════
         WORLD ANCHOR — fixes base_link so the arm does not drift/fall.
     ══════════════════════════════════════════════════════════════════════ -->
@@ -540,6 +548,66 @@
       </collision>
     </link>
 
+    <!-- ================================================================
+     THIN MOVING CONTACT SURFACE
+================================================================ -->
+
+<link name="belt_moving">
+
+  <inertial>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+
+    <mass value="0.1"/>
+
+    <!--
+      Approximate box inertia for:
+          mass = 0.1 kg
+          size = 0.34 x 0.05 x 0.001 m
+    -->
+    <inertia
+      ixx="0.00002084"
+      iyy="0.00096334"
+      izz="0.00098417"
+      ixy="0"
+      ixz="0"
+      iyz="0"/>
+  </inertial>
+
+  <collision>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+
+    <geometry>
+      <box
+        size="${belt_surface_length}
+              ${belt_surface_width}
+              ${belt_surface_thickness}"/>
+    </geometry>
+  </collision>
+
+  <!--
+    Temporary debug visual.
+
+    It should appear as a thin red transparent plate over the conveyor.
+    Remove this visual after confirming the alignment.
+  -->
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+
+    <geometry>
+      <box
+        size="${belt_surface_length}
+              ${belt_surface_width}
+              ${belt_surface_thickness}"/>
+    </geometry>
+
+    <material name="belt_moving_debug_material">
+      <color rgba="1.0 0.0 0.0 0.45"/>
+    </material>
+  </visual>
+
+</link>
+
+
     <!-- ══════════════════════════════════════════════════════════════════════
         ARM JOINTS (driven + parallelogram mimic)
     ══════════════════════════════════════════════════════════════════════ -->
@@ -752,6 +820,42 @@
       <origin xyz="-0.102917 0.149705 0.01" rpy="0 0 0"/>
       <parent link="base_link"/>
       <child link="conveyor_belt_link_1"/>
+    </joint>
+
+
+<!-- ================================================================
+     MOVING CONVEYOR SURFACE JOINT
+================================================================ -->
+
+    <joint name="belt_joint" type="prismatic">
+
+      <parent link="conveyor_belt_link_1"/>
+      <child link="belt_moving"/>
+
+      <!--
+        Approximate world position of the moving surface centre:
+
+          X = -0.102917 + 0.102917 = 0.0
+          Y =  0.149705 + 0.083295 = 0.233
+          Z =  0.010000 + 0.033500 = 0.0435
+      -->
+      <origin
+        xyz="${belt_surface_x} ${belt_surface_y} ${belt_surface_z}"
+        rpy="0 0 0"/>
+
+      <!-- Belt transport direction -->
+      <axis xyz="1 0 0"/>
+
+      <limit
+        lower="0.0"
+        upper="0.01"
+        effort="100000000.0"
+        velocity="10.0"/>
+
+      <dynamics
+        damping="1.0"
+        friction="0.0"/>
+
     </joint>
 
 </robot>
