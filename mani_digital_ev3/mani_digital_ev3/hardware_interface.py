@@ -30,6 +30,7 @@ class Ev3StateBridge(Node):
 
         self.declare_parameter("base_gear_ratio", 3.0)
         self.declare_parameter("arm_gear_ratio", 5.0)
+        self.declare_parameter("arm_scale", 1.0)
         self.declare_parameter("conveyor_gear_ratio", 1.0)
 
         self.declare_parameter("base_sign", 1.0)
@@ -57,6 +58,7 @@ class Ev3StateBridge(Node):
 
         self.base_gear = float(self.get_parameter("base_gear_ratio").value)
         self.arm_gear = float(self.get_parameter("arm_gear_ratio").value)
+        self.arm_scale = float(self.get_parameter("arm_scale").value)
         self.conveyor_gear = float(
             self.get_parameter("conveyor_gear_ratio").value
         )
@@ -128,28 +130,42 @@ class Ev3StateBridge(Node):
         self.create_timer(0.01, self.drain_queue)
         self.publish_connection(False)
 
+        self.get_logger().info(
+            "Arm mapping: q_sim = {:.6f} + ({:.6f}) * "
+            "radians(motor_deg / {:.6f})".format(
+                self.arm_zero,
+                self.arm_sign * self.arm_scale,
+                self.arm_gear,
+            )
+        )
+
     @staticmethod
     def motor_deg_to_joint_rad(
         motor_deg: float,
         gear_ratio: float,
         sign: float,
         zero_offset_rad: float = 0.0,
+        scale: float = 1.0,
     ) -> float:
         if gear_ratio == 0.0:
             raise ValueError("gear_ratio must not be zero")
 
-        return sign * math.radians(motor_deg / gear_ratio) + zero_offset_rad
+        return (
+            zero_offset_rad
+            + sign * scale * math.radians(motor_deg / gear_ratio)
+        )
 
     @staticmethod
     def motor_dps_to_joint_rad_s(
         motor_dps: float,
         gear_ratio: float,
         sign: float,
+        scale: float = 1.0,
     ) -> float:
         if gear_ratio == 0.0:
             raise ValueError("gear_ratio must not be zero")
 
-        return sign * math.radians(motor_dps / gear_ratio)
+        return sign * scale * math.radians(motor_dps / gear_ratio)
 
     def map_gripper_position(self, motor_deg: float) -> float:
         denominator = self.gripper_motor_closed - self.gripper_motor_open
@@ -318,6 +334,7 @@ class Ev3StateBridge(Node):
             self.arm_gear,
             self.arm_sign,
             self.arm_zero,
+            self.arm_scale,
         )
         gripper_pos = self.map_gripper_position(gripper_pos_deg)
         conveyor_pos = self.motor_deg_to_joint_rad(
@@ -335,6 +352,7 @@ class Ev3StateBridge(Node):
             arm_vel_dps,
             self.arm_gear,
             self.arm_sign,
+            self.arm_scale,
         )
         gripper_vel = self.map_gripper_velocity(gripper_vel_dps)
         conveyor_vel = self.motor_dps_to_joint_rad_s(
