@@ -1,0 +1,139 @@
+<?xml version="1.0" ?>
+<robot name="mani_digital_ev3" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <ros2_control name="ManipulatorSystem" type="system">
+    <hardware>
+      <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+    </hardware>
+
+    <!-- ============================================================
+         Motor A: base rotation (driven)
+         ============================================================ -->
+    <joint name="arm1_base_link_joint">
+      <command_interface name="position">
+        <param name="min">-3.14159</param>
+        <param name="max">3.14159</param>
+        <param name="p">120.0</param>
+        <param name="i">0.5</param>
+        <param name="d">10.0</param>
+        <param name="i_clamp">5.0</param>
+      </command_interface>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <!-- ============================================================
+         Motor B: arm pitch (driven)  — pitches up/down
+         ============================================================ -->
+    <joint name="arm1_arm2_joint">
+      <command_interface name="position">
+        <param name="min">-1.5708</param>
+        <param name="max">1.5708</param>
+        <param name="p">180.0</param>
+        <param name="i">8.0</param>
+        <param name="d">15.0</param>
+        <param name="i_clamp">12.0</param>
+      </command_interface>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <!-- Parallelogram wrist: mimics pitch in the OPPOSITE direction -->
+    <joint name="arm_2_3_connector_arm_2_joint">
+      <param name="mimic">arm1_arm2_joint</param>
+      <param name="multiplier">-1</param>
+      <param name="offset">0</param>
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <!-- ============================================================
+         Motor C: gripper master (driven)
+         ============================================================ -->
+    <joint name="left_gear_arm4_joint">
+      <command_interface name="position">
+        <param name="min">-0.8</param>
+        <param name="max">0.8</param>
+      </command_interface>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <!--  Gripper followers: all mimic left_gear_arm4_joint -->
+         Multiplier = -1 on every follower (mirror-gripper default).
+         If the RIGHT fingers open when they should close, flip the
+         three right-side joints below to +1 and rebuild.
+
+    <joint name="right_gear_arm4_joint">
+      <param name="mimic">left_gear_arm4_joint</param>
+      <param name="multiplier">1</param>
+      <param name="offset">0</param>
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="left_inner_finger_arm4_joint">
+      <param name="mimic">left_gear_arm4_joint</param>
+      <param name="multiplier">-1</param>
+      <param name="offset">0</param>
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="left_outer_finger_arm4_joint">
+      <param name="mimic">left_gear_arm4_joint</param>
+      <param name="multiplier">1</param>
+      <param name="offset">0</param>
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="right_inner_finger_arm4_joint">
+      <param name="mimic">left_gear_arm4_joint</param>
+      <param name="multiplier">1</param>
+      <param name="offset">0</param>
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="right_outer_finger_arm4_joint">
+      <param name="mimic">left_gear_arm4_joint</param>
+      <param name="multiplier">-1</param>
+      <param name="offset">0</param>
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <!-- ============================================================
+         Motor D: conveyor belt (driven, velocity)
+         NOTE: 'Revolute 1' in the source URDF was renamed to
+         'conveyor_left_pulley_joint' (spaces break param parsing).
+         Conveyor is cosmetic; sign is not critical.
+         ============================================================ -->
+    <joint name="conveyor_left_pulley_joint">
+      <command_interface name="velocity">
+        <param name="min">-10.0</param>
+        <param name="max">10.0</param>
+      </command_interface>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="right_pulley_bench_support_conector_joint">
+      <param name="mimic">conveyor_left_pulley_joint</param>
+      <param name="multiplier">-1</param>
+      <param name="offset">0</param>
+      <command_interface name="velocity"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+  </ros2_control>
+
+</robot>

@@ -1,0 +1,255 @@
+<?xml version="1.0" ?>
+<robot name="mani_digital_ev3" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:property name="body_color" value="Gazebo/Silver" />
+
+  <!-- ══════════════════════════════════════════════════════════════
+       ARM CHAIN
+  ══════════════════════════════════════════════════════════════ -->
+
+  <gazebo reference="base_link">
+    <material>${body_color}</material>
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+    <self_collide>false</self_collide>
+    <gravity>true</gravity>
+  </gazebo>
+
+  <gazebo reference="arm_1_1">
+    <material>${body_color}</material>
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+    <self_collide>false</self_collide>
+  </gazebo>
+
+  <gazebo reference="arm_2_1">
+    <material>${body_color}</material>
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+    <self_collide>false</self_collide>
+  </gazebo>
+
+  <gazebo reference="arm_2_arm_3_link_1">
+    <material>${body_color}</material>
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+    <self_collide>false</self_collide>
+  </gazebo>
+
+  <gazebo reference="arm_4_1">
+    <material>${body_color}</material>
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+    <self_collide>false</self_collide>
+  </gazebo>
+
+  <gazebo reference="sensor_housing_arm_2_1">
+    <material>${body_color}</material>
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+    <self_collide>false</self_collide>
+  </gazebo>
+
+  <gazebo reference="arm2_end_support_1">
+    <material>${body_color}</material>
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+    <self_collide>false</self_collide>
+  </gazebo>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       GRIPPER — gears + fingers
+       Friction coefficients elevated to keep ball locked in grasp
+  ══════════════════════════════════════════════════════════════ -->
+
+  <gazebo reference="left_gear_1">
+    <material>${body_color}</material>
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+    <self_collide>false</self_collide>
+  </gazebo>
+
+  <gazebo reference="right_gear_1">
+    <material>${body_color}</material>
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+    <self_collide>false</self_collide>
+  </gazebo>
+
+  <gazebo reference="left_inner_finger_1">
+    <material>${body_color}</material>
+    <mu1>1.5</mu1>
+    <mu2>1.5</mu2>
+    <self_collide>false</self_collide>
+  </gazebo>
+
+  <gazebo reference="left_outer_finger_1">
+    <material>${body_color}</material>
+    <mu1>1.5</mu1>
+    <mu2>1.5</mu2>
+    <self_collide>false</self_collide>
+  </gazebo>
+
+  <gazebo reference="right_inner_finger_1">
+    <material>${body_color}</material>
+    <mu1>1.5</mu1>
+    <mu2>1.5</mu2>
+    <self_collide>false</self_collide>
+  </gazebo>
+
+  <gazebo reference="right_outer_finger_1">
+    <material>${body_color}</material>
+    <mu1>1.5</mu1>
+    <mu2>1.5</mu2>
+    <self_collide>false</self_collide>
+  </gazebo>
+
+  <gazebo reference="motor_shaft_arm_4_outer_gripper_1">
+    <material>${body_color}</material>
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+    <self_collide>false</self_collide>
+  </gazebo>
+
+  <gazebo reference="motor_shaft_arm_4_inner_gripper_1">
+    <material>${body_color}</material>
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+    <self_collide>false</self_collide>
+  </gazebo>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       CONVEYOR + STATIC STRUCTURE
+  ══════════════════════════════════════════════════════════════ -->
+
+  <gazebo reference="conveyor_belt_link_1">
+    <material>${body_color}</material>
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+    <self_collide>false</self_collide>
+  </gazebo>
+
+  <gazebo reference="left_pulley_link_1">
+    <material>${body_color}</material>
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+    <self_collide>false</self_collide>
+  </gazebo>
+
+  <gazebo reference="right_pulley_link_1">
+    <material>${body_color}</material>
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+    <self_collide>false</self_collide>
+  </gazebo>
+
+  <gazebo reference="bench_support_left_pulley_link_1">
+    <material>${body_color}</material>
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+    <self_collide>false</self_collide>
+  </gazebo>
+
+  <gazebo reference="bench_support_right_pulley_link_1">
+    <material>${body_color}</material>
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+    <self_collide>false</self_collide>
+  </gazebo>
+
+  <gazebo reference="bench_support_link_1">
+    <material>${body_color}</material>
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+    <self_collide>false</self_collide>
+  </gazebo>
+
+  <gazebo reference="base_link_bench_support_link_1">
+    <material>${body_color}</material>
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+    <self_collide>false</self_collide>
+  </gazebo>
+
+  <gazebo reference="base_motor_housing_1">
+    <material>${body_color}</material>
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+    <self_collide>false</self_collide>
+  </gazebo>
+
+  <gazebo reference="bench_stand_link_1">
+    <material>${body_color}</material>
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+    <self_collide>false</self_collide>
+  </gazebo>
+
+  <gazebo reference="sensor_housing_link_1">
+    <material>${body_color}</material>
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+    <self_collide>false</self_collide>
+  </gazebo>
+
+  <gazebo reference="belt_moving">
+
+    <!-- Friction between the belt surface and ball -->
+    <mu1>1.5</mu1>
+    <mu2>1.5</mu2>
+
+    <!-- Contact stability -->
+    <kp>1000000.0</kp>
+    <kd>10.0</kd>
+
+    <minDepth>0.0001</minDepth>
+    <maxVel>0.1</maxVel>
+
+    <!-- Debug colour -->
+    <material>Gazebo/Red</material>
+
+  </gazebo>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       PLUGINS (IGNITION GAZEBO FORTRESS)
+  ══════════════════════════════════════════════════════════════ -->
+
+  <!-- IFRA Conveyor Belt Plugin for Ignition Gazebo Fortress -->
+  <!-- <gazebo>
+    <plugin
+      filename="libconveyorbelt_gazebo.so"
+      name="conveyorbelt_gazebo::ConveyorBeltPlugin">
+      <max_velocity>1.0</max_velocity>
+      <belt_link>conveyor_belt_link_1</belt_link>
+    </plugin>
+  </gazebo> -->
+
+  <gazebo>
+
+    <plugin
+      name="ros2_conveyorbelt_system"
+      filename="libros2gz_conveyorbelt_system.so">
+
+      <max_velocity>1.0</max_velocity>
+
+      <publish_rate>1000</publish_rate>
+
+      <!-- This refers to the separately declared prismatic joint. -->
+      <joint_name>belt_joint</joint_name>
+
+      <lower_limit>0.0</lower_limit>
+      <upper_limit>0.01</upper_limit>
+
+    </plugin>
+
+  </gazebo>
+  <!-- gz_ros2_control plugin -->
+  <gazebo>
+    <plugin filename="gz_ros2_control-system"
+            name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+      <parameters>$(find mani_digital_ev3)/config/controller.yaml</parameters>
+      <position_proportional_gain>120.0</position_proportional_gain>
+    </plugin>
+  </gazebo>
+
+</robot>
