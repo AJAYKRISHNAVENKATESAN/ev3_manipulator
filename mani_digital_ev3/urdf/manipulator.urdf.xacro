@@ -1,9 +1,0 @@
-<?xml version="1.0" ?>
-<robot name="mani_digital_ev3" xmlns:xacro="http://www.ros.org/wiki/xacro">
-
-    <xacro:include filename="$(find mani_digital_ev3)/urdf/manipulator_materials.xacro" />
-    <xacro:include filename="$(find mani_digital_ev3)/urdf/manipulator_control.xacro" />
-    <xacro:include filename="$(find mani_digital_ev3)/urdf/manipulator_gazebo.xacro" />
-    <xacro:include filename="$(find mani_digital_ev3)/urdf/manipulator_urdf.xacro" />
-
-</robot>

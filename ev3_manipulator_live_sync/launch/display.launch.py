@@ -76,7 +76,7 @@ from ament_index_python.packages import get_package_share_directory
 
 
 def generate_launch_description():
-    share_dir = get_package_share_directory('mani_digital_ev3')
+    share_dir = get_package_share_directory('ev3_manipulator_live_sync')
 
     xacro_file = os.path.join(share_dir, 'urdf', 'manipulator.urdf.xacro')
     robot_description_config = xacro.process_file(xacro_file)
