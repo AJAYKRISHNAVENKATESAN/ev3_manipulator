@@ -222,7 +222,14 @@ def run_synced_stage(
     sequence_id,
     stage,
     hardware_action,
+    checkpoint_callback=None,
 ):
+    """
+    Execute a synchronized stage with optional checkpoint support.
+    
+    Args:
+        checkpoint_callback: callable(stage, pct, elapsed_ms) for progress updates
+    """
     print(
         "[STAGE] {}:{} {} START"
         .format(cycle_id, sequence_id, stage)
@@ -247,6 +254,17 @@ def run_synced_stage(
         "[STAGE] {}:{} {} HARDWARE_DONE hardware_ms={}ms"
         .format(cycle_id, sequence_id, stage, hardware_ms)
     )
+
+    # Send timing feedback for calibration
+    if USE_ROS2_SYNC:
+        send_line(
+            "TIMING_FEEDBACK|{}|{}|{}|{}".format(
+                cycle_id,
+                sequence_id,
+                stage,
+                hardware_ms,
+            )
+        )
 
     if USE_ROS2_SYNC:
         send_line(
