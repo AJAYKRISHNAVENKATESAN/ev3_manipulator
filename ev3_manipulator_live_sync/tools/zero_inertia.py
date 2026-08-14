@@ -18,9 +18,9 @@ Key correctness points handled:
 Usage:
   pip install trimesh numpy lxml
   python3 fix_zero_inertias.py \
-      --urdf mani_digital_ev3.urdf.xacro \
+      --urdf manipulator.urdf.xacro \
       --meshes /path/to/meshes \
-      --out mani_digital_ev3.fixed.urdf.xacro
+      --out manipulator_urdf.fixed.xacro
 
   # dry run (report only, write nothing):
   python3 fix_zero_inertias.py --urdf ... --meshes ... --dry-run
