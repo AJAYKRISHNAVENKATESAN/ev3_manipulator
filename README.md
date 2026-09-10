@@ -99,27 +99,6 @@ events — spawning a ball on ball-detected, and starting/stopping the
 simulated conveyor around a pickup action — everything else is continuous
 mirroring, not scripted stages.
 
-### ev3_manipulator_moveit (🚧 work in progress)
-```mermaid
-flowchart LR
-    subgraph MoveIt2 ["MoveIt 2 (move_group)"]
-        PL["OMPL path planner"]
-        IK["KDL / TRAC-IK<br/>IK solver"]
-    end
-    JTC["joint_trajectory_controller"]
-    SIM["Ignition Gazebo<br/>simulated twin"]
-    HW["hardware_interface<br/>(physical EV3)"]
-
-    MoveIt2 -- "FollowJointTrajectory<br/>action" --> JTC
-    JTC --> SIM
-    JTC --> HW
-```
-The intended design: `move_group` plans a path with OMPL, solves IK, and
-sends it as a single `FollowJointTrajectory` action to a
-`joint_trajectory_controller` that drives *both* the Gazebo twin and the
-physical EV3 through `hardware_interface` — one plan, two targets. Not wired
-up yet: `ev3_manipulator_moveit/` is still scaffolding (see Status below).
-
 ## Tech stack
 - **ROS 2** (Humble by default, Jazzy supported) — `ros2_control`, URDF/xacro
 - **Gazebo** (Fortress/Ignition, or Harmonic on Jazzy) for simulation; **Isaac Sim 5.1** as an alternate sim backend
@@ -140,11 +119,9 @@ up yet: `ev3_manipulator_moveit/` is still scaffolding (see Status below).
   a stage handshake, and `sorting_node` mirrors it straight into the sim with
   no synchronization barrier. `ev3_manipulator_live_sync_firmware/` is its
   EV3-side counterpart — also not a ROS 2 package.
-- **`ev3_manipulator_moveit/`** — MoveIt 2 config. **Experimental / unused** —
-  scaffolding for future MoveIt-based control of the sim and hardware; not
-  currently wired into either package's `sorting_node`/`hardware_interface`,
-  and its config still targets an older URDF. Explored as future work, not
-  part of either current sorting pipeline.
+- **`ev3_manipulator_moveit/`** — see its own
+  [README](ev3_manipulator_moveit/README.md) for architecture, layout, and
+  status.
 - **`conveyor_belt/`** — vendored third-party Gazebo-ROS2 conveyor belt
   plugin ([IFRA-Cranfield/IFRA_ConveyorBelt](https://github.com/IFRA-Cranfield/IFRA_ConveyorBelt)),
   used by both packages' simulations.
@@ -176,9 +153,8 @@ section above for what each package's firmware does.
   start-stop from EV3-reported events. Exact spatial alignment at the pickup
   point still depends on calibrating the simulated conveyor's pickup timing
   against the EV3 action duration and belt geometry.
-- **MoveIt 2 — to be explored in the near future.** `ev3_manipulator_moveit/`
-  is experimental scaffolding, not yet wired into either sim/hardware sync
-  above.
+- **`ev3_manipulator_moveit`** — see its
+  [README](ev3_manipulator_moveit/README.md#status) for current status.
 
 ## Development environment (Docker)
 
