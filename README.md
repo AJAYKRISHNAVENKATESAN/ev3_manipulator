@@ -28,29 +28,6 @@ https://github.com/user-attachments/assets/a11ed067-34a3-43b9-aa6a-01087d70825e
 
 ## Architecture
 
-### ev3_manipulator_live_sync
-```mermaid
-flowchart LR
-    subgraph ROS 2
-        HI["hardware_interface<br/>(TCP telemetry bridge)"]
-        SN["sorting_node<br/>(Gazebo state mirror)"]
-    end
-    BRICK["EV3 brick<br/>ev3_manipulator_live_sync_firmware/sorting.py<br/>(pybricks-micropython)"]
-    SIM["Gazebo sim<br/>(position controller +<br/>conveyor plugin)"]
-
-    BRICK -- "continuous encoder telemetry<br/>+ event notifications" --> HI
-    HI -- "/digital_twin/joint_states<br/>/digital_twin/events" --> SN
-    SN -- "continuous position commands" --> SIM
-    SN -- "spawn ball / start-stop conveyor<br/>on EV3 events" --> SIM
-```
-Unlike `stage_sync`, there's no handshake or stage barrier: `hardware_interface`
-streams the brick's encoder positions/velocities to ROS as fast as they
-arrive, and `sorting_node` mirrors them straight into the sim's position
-controller every cycle. It only reacts *discretely* to two EV3-reported
-events — spawning a ball on ball-detected, and starting/stopping the
-simulated conveyor around a pickup action — everything else is continuous
-mirroring, not scripted stages.
-
 ## Tech stack
 - **ROS 2** (Humble by default, Jazzy supported) — `ros2_control`, URDF/xacro
 - **Gazebo** (Fortress/Ignition, or Harmonic on Jazzy) for simulation; **Isaac Sim 5.1** as an alternate sim backend
@@ -63,11 +40,9 @@ mirroring, not scripted stages.
 - **`ev3_manipulator_stage_sync/`** — see its own
   [README](ev3_manipulator_stage_sync/README.md) for architecture, layout,
   and status.
-- **`ev3_manipulator_live_sync/`** — same shape as `stage_sync`, but
-  `hardware_interface` receives a continuous EV3 telemetry stream instead of
-  a stage handshake, and `sorting_node` mirrors it straight into the sim with
-  no synchronization barrier. `ev3_manipulator_live_sync_firmware/` is its
-  EV3-side counterpart — also not a ROS 2 package.
+- **`ev3_manipulator_live_sync/`** — see its own
+  [README](ev3_manipulator_live_sync/README.md) for architecture, layout,
+  and status.
 - **`ev3_manipulator_moveit/`** — see its own
   [README](ev3_manipulator_moveit/README.md) for architecture, layout, and
   status.
@@ -92,11 +67,8 @@ section above for what each package's firmware does.
 ## Status / Roadmap
 - **`ev3_manipulator_stage_sync`** — see its
   [README](ev3_manipulator_stage_sync/README.md#status) for current status.
-- **`ev3_manipulator_live_sync` — telemetry mirroring.** Continuously mirrors
-  EV3 encoder state into the sim and triggers ball spawn / conveyor
-  start-stop from EV3-reported events. Exact spatial alignment at the pickup
-  point still depends on calibrating the simulated conveyor's pickup timing
-  against the EV3 action duration and belt geometry.
+- **`ev3_manipulator_live_sync`** — see its
+  [README](ev3_manipulator_live_sync/README.md#status) for current status.
 - **`ev3_manipulator_moveit`** — see its
   [README](ev3_manipulator_moveit/README.md#status) for current status.
 
