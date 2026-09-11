@@ -1,26 +1,44 @@
 # ev3_manipulator
 
-Two independent ROS 2 packages for a 2.5-DOF EV3 LEGO pick-and-place robot,
-each keeping a Gazebo digital twin in sync with the physical hardware a
-different way:
+A ROS 2 pick-and-place pipeline for a 2.5-DOF EV3 LEGO manipulator arm. A
+color sensor watches balls fed onto a conveyor and sorts each one by color:
+red and blue balls get picked up by the arm and set back down at the side of
+the conveyor, black balls run all the way forward off the conveyor, and
+green balls get sent back the way they came. Each run sorts exactly four
+balls.
 
-- **`ev3_manipulator_stage_sync`** — the same sort-cycle logic runs both in
-  an Ignition Gazebo simulation and on a physical LEGO Mindstorms EV3 brick,
-  kept in lockstep by TCP interlocks at every stage.
-- **`ev3_manipulator_live_sync`** — a pure digital twin: the sim continuously
-  mirrors the physical brick's live encoder telemetry over TCP, with no stage
-  barrier or handshake.
+This is done three different ways:
+- **`ev3_manipulator_stage_sync`** — runs the sort cycle on both the
+  simulator and the real EV3 brick together, staying in step at every stage.
+- **`ev3_manipulator_live_sync`** — a live digital twin: continuously
+  mirrors the real brick's movement into the simulator.
+- **`ev3_manipulator_moveit`** (🚧 work in progress) — plans a
+  collision-free path for the arm and drives the `live_sync` digital twin
+  along it.
 
 ![EV3 manipulator hardware showing the homing switches for the base and pickup-arm encoders](docs/images/manipulator_ev3.png)
 *Homing switches for the base and pickup-arm motors — pressing one gives that motor's encoder a known zero point to center its angle from.*
 
-## Tech stack
-- **ROS 2** (Humble by default, Jazzy supported) — `ros2_control`, URDF/xacro
-- **Gazebo** (Fortress/Ignition, or Harmonic on Jazzy) for simulation; **Isaac Sim 5.1** as an alternate sim backend
-- **Python** — each package's `sorting_node` and `hardware_interface` nodes
-- **pybricks-micropython** — runs on the physical EV3 brick; talks to `hardware_interface` over TCP (a stage handshake for `stage_sync`, a continuous telemetry stream for `live_sync`)
-- **MoveIt 2** — scaffolded, not yet integrated
-- **Docker** — containerized, GPU-accelerated dev environments for every stack above
+## Pipeline
+*(GIF coming soon)*
+
+```mermaid
+flowchart TD
+    A[Ball placed on conveyor] --> B{Color sensor detects color}
+    B -- RED / BLUE --> C[Conveyor runs forward to pickup position]
+    C --> D{Which color?}
+    D -- RED --> D1[Arm places ball at left extreme]
+    D -- BLUE --> D2[Arm places ball at right extreme]
+    B -- BLACK --> E[Conveyor runs forward, off the end]
+    B -- GREEN --> F[Conveyor reverses, ball exits backward]
+    D1 --> G{4 balls sorted?}
+    D2 --> G
+    E --> G
+    F --> G
+    G -- No --> A
+    G -- Yes --> H[Cycle complete]
+```
+After all four balls are sorted, the cycle ends.
 
 ## Packages
 - [`ev3_manipulator_stage_sync`](ev3_manipulator_stage_sync/README.md)
@@ -29,6 +47,14 @@ different way:
 - [`conveyor_belt/`](conveyor_belt/) — vendored third-party Gazebo-ROS2 conveyor
   belt plugin
   ([IFRA-Cranfield/IFRA_ConveyorBelt](https://github.com/IFRA-Cranfield/IFRA_ConveyorBelt))
+
+## Tech stack
+- **ROS 2** (Humble by default, Jazzy supported) — `ros2_control`, URDF/xacro
+- **Gazebo** (Fortress/Ignition, or Harmonic on Jazzy) for simulation; **Isaac Sim 5.1** as an alternate sim backend
+- **Python** — each package's `sorting_node` and `hardware_interface` nodes
+- **pybricks-micropython** — runs on the physical EV3 brick; talks to `hardware_interface` over TCP (a stage handshake for `stage_sync`, a continuous telemetry stream for `live_sync`)
+- **MoveIt 2** — scaffolded, not yet integrated
+- **Docker** — containerized, GPU-accelerated dev environments for every stack above
 
 ## Quickstart
 ```bash
