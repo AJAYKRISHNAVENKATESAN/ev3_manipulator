@@ -20,7 +20,8 @@ This is done three different ways:
 *Homing switches for the base and pickup-arm motors — pressing one gives that motor's encoder a known zero point to center its angle from.*
 
 ## Pipeline
-*(GIF coming soon)*
+![Physical arm and its Gazebo digital twin moving in sync, captured from ev3_manipulator_stage_sync](docs/images/pipeline_demo.gif)
+*(clip: `ev3_manipulator_stage_sync`)*
 
 ```mermaid
 flowchart TD
