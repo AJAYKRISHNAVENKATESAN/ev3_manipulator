@@ -4,6 +4,8 @@ ROS 2 package that runs the same sort-cycle logic both in an Ignition Gazebo
 simulation and on a physical LEGO Mindstorms EV3 brick, kept in lockstep by a
 TCP handshake at every stage of the cycle.
 
+https://github.com/user-attachments/assets/a11ed067-34a3-43b9-aa6a-01087d70825e
+
 ## Layout
 URDF/xacro, meshes, Gazebo sim launch, `ros2_control`, dev `tools/`, and the
 `sorting_node` / `hardware_interface` nodes that drive the sim and talk to
