@@ -1,10 +1,8 @@
 # ev3_manipulator_moveit (🚧 work in progress)
 
-MoveIt 2 config for the EV3 manipulator — scaffolding for future MoveIt-based
-control of the sim and hardware. **Experimental / unused**: not currently
-wired into either `stage_sync` or `live_sync`'s `sorting_node` /
-`hardware_interface`, and its config still targets an older URDF. Explored
-as future work, not part of either current sorting pipeline.
+MoveIt 2 config for the EV3 manipulator. **🚧 Active development**: collision-free
+path planning for the `live_sync` digital twin. Not yet wired into `live_sync`'s
+`sorting_node` / `hardware_interface`, and its config still targets an older URDF.
 
 ## Architecture
 ```mermaid
@@ -14,19 +12,31 @@ flowchart LR
         IK["KDL / TRAC-IK<br/>IK solver"]
     end
     JTC["joint_trajectory_controller"]
-    SIM["Ignition Gazebo<br/>simulated twin"]
-    HW["hardware_interface<br/>(physical EV3)"]
+    SIM["live_sync digital twin<br/>(Gazebo)"]
 
     MoveIt2 -- "FollowJointTrajectory<br/>action" --> JTC
     JTC --> SIM
-    JTC --> HW
 ```
 The intended design: `move_group` plans a path with OMPL, solves IK, and
-sends it as a single `FollowJointTrajectory` action to a
-`joint_trajectory_controller` that drives *both* the Gazebo twin and the
-physical EV3 through `hardware_interface` — one plan, two targets. Not wired
-up yet: this package is still scaffolding (see Status below).
+sends it as a `FollowJointTrajectory` action to a `joint_trajectory_controller`
+that drives the `live_sync` digital twin. Not wired up yet: this package is
+still scaffolding (see Status below).
+
+Each planning attempt belongs to this loop — resample on collision, execute
+once clear:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Planning : pick/place goal received
+    Planning --> CollisionCheck : OMPL candidate path
+    CollisionCheck --> Planning : path in collision, resample
+    CollisionCheck --> Executing : path clear
+    Executing --> Idle : FollowJointTrajectory to live_sync twin complete
+```
 
 ## Status
-**To be explored in the near future.** This package is experimental
-scaffolding, not yet wired into either sim/hardware sync pipeline above.
+**Active work: collision-free path planning for the `live_sync` digital
+twin.** OMPL plans a path, checked for collisions, then sent as a single
+`FollowJointTrajectory` action to drive `live_sync`'s simulated arm. Not yet
+wired into `hardware_interface` for the physical EV3.

@@ -35,6 +35,20 @@ events — spawning a ball on ball-detected, and starting/stopping the
 simulated conveyor around a pickup action — everything else is continuous
 mirroring, not scripted stages.
 
+Unlike `stage_sync`'s staged handshake, there's really only one steady state —
+continuous mirroring — briefly interrupted by two discrete EV3-reported events:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Mirroring : brick connects
+    Mirroring --> Mirroring : continuous encoder telemetry
+    Mirroring --> SpawnBall : ball-detected event
+    SpawnBall --> Mirroring
+    Mirroring --> ConveyorRun : pickup event (start)
+    ConveyorRun --> Mirroring : pickup event (stop)
+```
+
 ## Status
 **Telemetry mirroring.** Continuously mirrors EV3 encoder state into the sim
 and triggers ball spawn / conveyor start-stop from EV3-reported events.
