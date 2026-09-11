@@ -28,75 +28,6 @@ https://github.com/user-attachments/assets/a11ed067-34a3-43b9-aa6a-01087d70825e
 
 ## Architecture
 
-### ev3_manipulator_stage_sync
-```mermaid
-flowchart LR
-    subgraph ROS 2
-        SN["sorting_node<br/>(sort-cycle logic)"]
-        HI["hardware_interface<br/>(TCP bridge)"]
-        CM["ros2_control<br/>controller_manager"]
-    end
-    SIM["Gazebo sim<br/>(arm model)"]
-    BRICK["EV3 brick<br/>ev3_manipulator_stage_sync_firmware/sorting.py<br/>(pybricks-micropython)"]
-
-    SN -- "FollowJointTrajectory<br/>action" --> CM --> SIM
-    SN <-- "stage_event / stage_sync<br/>topics" --> HI
-    HI <-- "TCP handshake<br/>(homing, ready-to-pick,<br/>ready-to-place, cycle-done)" --> BRICK
-```
-`sorting_node` drives the sim arm directly via `ros2_control` and stays in
-sync with the physical arm through `hardware_interface`, which owns the TCP
-handshake link to the EV3 brick.
-
-Each stage above belongs to a per-cycle state machine — one pass through
-this for every ball/brick fed onto the conveyor:
-
-```mermaid
-stateDiagram-v2
-    [*] --> InitialHome
-    InitialHome --> WaitBall
-    WaitBall --> Spawn : colour detected
-    Spawn --> ConveyorToPickup : RED / BLUE
-    Spawn --> ConveyorEject : BLACK / GREEN
-
-    ConveyorToPickup --> PickupReady
-    PickupReady --> PickDown
-    PickDown --> GripClose
-    GripClose --> PickUp
-    PickUp --> Rotate
-    Rotate --> PlaceDown
-    PlaceDown --> Release
-    Release --> PlaceUp
-    PlaceUp --> HomeAfterPick
-    HomeAfterPick --> CycleComplete
-
-    ConveyorEject --> CenterHold
-    CenterHold --> CycleComplete
-
-    CycleComplete --> WaitBall : more balls
-    CycleComplete --> [*] : all balls sorted
-```
-
-### ev3_manipulator_moveit (🚧 work in progress)
-```mermaid
-flowchart LR
-    subgraph MoveIt2 ["MoveIt 2 (move_group)"]
-        PL["OMPL path planner"]
-        IK["KDL / TRAC-IK<br/>IK solver"]
-    end
-    JTC["joint_trajectory_controller"]
-    SIM["Ignition Gazebo<br/>simulated twin"]
-    HW["hardware_interface<br/>(physical EV3)"]
-
-    MoveIt2 -- "FollowJointTrajectory<br/>action" --> JTC
-    JTC --> SIM
-    JTC --> HW
-```
-The intended design: `move_group` plans a path with OMPL, solves IK, and
-sends it as a single `FollowJointTrajectory` action to a
-`joint_trajectory_controller` that drives *both* the Gazebo twin and the
-physical EV3 through `hardware_interface` — one plan, two targets. Not wired
-up yet: `ev3_manipulator_moveit/` is still scaffolding (see Status below).
-
 ## Tech stack
 - **ROS 2** (Humble by default, Jazzy supported) — `ros2_control`, URDF/xacro
 - **Gazebo** (Fortress/Ignition, or Harmonic on Jazzy) for simulation; **Isaac Sim 5.1** as an alternate sim backend
@@ -106,20 +37,15 @@ up yet: `ev3_manipulator_moveit/` is still scaffolding (see Status below).
 - **Docker** — containerized, GPU-accelerated dev environments for every stack above
 
 ## Layout
-- **`ev3_manipulator_stage_sync/`** — ROS 2 package: URDF/xacro, meshes,
-  Gazebo sim launch, `ros2_control`, dev `tools/`, and the `sorting_node` /
-  `hardware_interface` nodes that drive the sim and talk to the physical
-  brick over a TCP handshake. `ev3_manipulator_stage_sync_firmware/` holds
-  the `pybricks-micropython` counterpart that runs on the EV3 brick itself —
-  **not a ROS 2 package** (colcon-ignored).
+- **`ev3_manipulator_stage_sync/`** — see its own
+  [README](ev3_manipulator_stage_sync/README.md) for architecture, layout,
+  and status.
 - **`ev3_manipulator_live_sync/`** — see its own
   [README](ev3_manipulator_live_sync/README.md) for architecture, layout,
   and status.
-- **`ev3_manipulator_moveit/`** — MoveIt 2 config. **Experimental / unused** —
-  scaffolding for future MoveIt-based control of the sim and hardware; not
-  currently wired into either package's `sorting_node`/`hardware_interface`,
-  and its config still targets an older URDF. Explored as future work, not
-  part of either current sorting pipeline.
+- **`ev3_manipulator_moveit/`** — see its own
+  [README](ev3_manipulator_moveit/README.md) for architecture, layout, and
+  status.
 - **`conveyor_belt/`** — vendored third-party Gazebo-ROS2 conveyor belt
   plugin ([IFRA-Cranfield/IFRA_ConveyorBelt](https://github.com/IFRA-Cranfield/IFRA_ConveyorBelt)),
   used by both packages' simulations.
@@ -139,18 +65,12 @@ relevant package's firmware `sorting.py` to the brick — see the Layout
 section above for what each package's firmware does.
 
 ## Status / Roadmap
-- **`ev3_manipulator_stage_sync` — active work.** Both the sim and the
-  physical brick run their own sort cycle correctly in isolation.
-  `sorting_node.py` and the brick's firmware `sorting.py` handshake at each
-  stage of a sort cycle (homing, ready-to-pick, ready-to-place, cycle-done)
-  over the TCP link owned by `hardware_interface.py`. Getting their timing to
-  line up stage-for-stage over that handshake is the remaining work — this
-  sync is still being fine-tuned, not a finished/stable protocol yet.
+- **`ev3_manipulator_stage_sync`** — see its
+  [README](ev3_manipulator_stage_sync/README.md#status) for current status.
 - **`ev3_manipulator_live_sync`** — see its
   [README](ev3_manipulator_live_sync/README.md#status) for current status.
-- **MoveIt 2 — to be explored in the near future.** `ev3_manipulator_moveit/`
-  is experimental scaffolding, not yet wired into either sim/hardware sync
-  above.
+- **`ev3_manipulator_moveit`** — see its
+  [README](ev3_manipulator_moveit/README.md#status) for current status.
 
 ## Development environment (Docker)
 
