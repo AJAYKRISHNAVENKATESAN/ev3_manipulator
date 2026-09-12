@@ -36,6 +36,62 @@ BALL_RGB = {
 }
 
 # Physics-enabled ball: collision is present and gravity is enabled by default.
+# ----------------------------------------------------------------------
+# Old SDF kept for reference:
+# BALL_SDF = """<sdf version='1.7'>
+#   <model name='{name}'>
+#     <link name='link'>
+#       <inertial>
+#         <mass>0.05</mass>
+#         <inertia>
+#           <ixx>3.92e-06</ixx>
+#           <iyy>3.92e-06</iyy>
+#           <izz>3.92e-06</izz>
+#           <ixy>0.0</ixy>
+#           <ixz>0.0</ixz>
+#           <iyz>0.0</iyz>
+#         </inertia>
+#       </inertial>
+#
+#       <collision name='collision'>
+#         <geometry>
+#           <sphere><radius>{radius}</radius></sphere>
+#         </geometry>
+#         <surface>
+#           <friction>
+#             <ode>
+#               <mu>{friction}</mu>
+#               <mu2>{friction}</mu2>
+#             </ode>
+#           </friction>
+#           <bounce>
+#             <restitution_coefficient>0.0</restitution_coefficient>
+#             <threshold>100000.0</threshold>
+#           </bounce>
+#           <contact>
+#             <ode>
+#               <kp>1000000.0</kp>
+#               <kd>10.0</kd>
+#               <max_vel>0.1</max_vel>
+#               <min_depth>0.0001</min_depth>
+#             </ode>
+#           </contact>
+#         </surface>
+#       </collision>
+#
+#       <visual name='visual'>
+#         <geometry>
+#           <sphere><radius>{radius}</radius></sphere>
+#         </geometry>
+#         <material>
+#           <ambient>{r} {g} {b} 1</ambient>
+#           <diffuse>{r} {g} {b} 1</diffuse>
+#         </material>
+#       </visual>
+#     </link>
+#   </model>
+# </sdf>"""
+# ----------------------------------------------------------------------
 BALL_SDF = """<sdf version='1.7'>
   <model name='{name}'>
     <link name='link'>
@@ -53,13 +109,14 @@ BALL_SDF = """<sdf version='1.7'>
 
       <collision name='collision'>
         <geometry>
-          <sphere><radius>{radius}</radius></sphere>
+          <!-- 1mm larger collision radius prevents dipping into frame seams -->
+          <sphere><radius>{collision_radius}</radius></sphere>
         </geometry>
         <surface>
           <friction>
             <ode>
-              <mu>1.5</mu>
-              <mu2>1.5</mu2>
+              <mu>{friction}</mu>
+              <mu2>{friction}</mu2>
             </ode>
           </friction>
           <bounce>
@@ -79,7 +136,7 @@ BALL_SDF = """<sdf version='1.7'>
 
       <visual name='visual'>
         <geometry>
-          <sphere><radius>{radius}</radius></sphere>
+          <sphere><radius>{visual_radius}</radius></sphere>
         </geometry>
         <material>
           <ambient>{r} {g} {b} 1</ambient>
@@ -125,8 +182,9 @@ class GazeboStateMirror(Node):
             "conveyor_power_service",
             "/CONVEYORPOWER",
         )
-        self.declare_parameter("conveyor_pickup_power", 5.0)
-        self.declare_parameter("conveyor_black_power", 18.0)
+        self.declare_parameter("conveyor_pickup_power", 6.0)
+        self.declare_parameter("conveyor_black_power", 20.0)
+        self.declare_parameter("conveyor_green_power", -90.0)
 
         self.position_joints = [
             str(name)
@@ -162,6 +220,24 @@ class GazeboStateMirror(Node):
         self.conveyor_black_power = max(
             0.0,
             min(100.0, self.conveyor_black_power),
+        )
+
+        # ------------------------------------------------------------------
+        # Old green-power clamp logic kept for reference:
+        # self.conveyor_green_power = float(
+        #     self.get_parameter("conveyor_green_power").value
+        # )
+        # self.conveyor_green_power = max(
+        #     0.0,
+        #     min(100.0, self.conveyor_green_power),
+        # )
+        # ------------------------------------------------------------------
+        self.conveyor_green_power = float(
+            self.get_parameter("conveyor_green_power").value
+        )
+        self.conveyor_green_power = max(
+            -100.0,
+            min(0.0, self.conveyor_green_power),
         )
 
         position_topic = str(
@@ -341,11 +417,22 @@ class GazeboStateMirror(Node):
                 self.set_conveyor_power(self.conveyor_black_power)
                 return
 
+            # ----------------------------------------------------------------
+            # Old green conveyor handling kept for reference:
+            # if action == "CONVEYOR_GREEN":
+            #     self.get_logger().warning(
+            #         "CONVEYOR_GREEN requires reverse motion, but the stock "
+            #         "IFRA service accepts only non-negative power."
+            #     )
+            #     return
+            # ----------------------------------------------------------------
             if action == "CONVEYOR_GREEN":
-                self.get_logger().warning(
-                    "CONVEYOR_GREEN requires reverse motion, but the stock "
-                    "IFRA service accepts only non-negative power."
+                self.get_logger().info(
+                    "EV3 green-ball conveyor started for cycle {}; "
+                    "starting simulated conveyor in REVERSE at power {:.2f}."
+                    .format(cycle_id, self.conveyor_green_power)
                 )
+                self.set_conveyor_power(self.conveyor_green_power)
                 return
 
         if event_name == "ACTION_DONE":
@@ -354,6 +441,7 @@ class GazeboStateMirror(Node):
             if action in (
                 "CONVEYOR_TO_PICKUP",
                 "CONVEYOR_BLACK",
+                "CONVEYOR_GREEN",
             ):
                 self.get_logger().info(
                     "EV3 conveyor action {} completed for cycle {}; "
@@ -382,9 +470,49 @@ class GazeboStateMirror(Node):
     # IFRA conveyor service
     # ==============================================================
 
+    # ----------------------------------------------------------------------
+    # Old conveyor setter kept for reference:
+    # def set_conveyor_power(self, power: float) -> None:
+    #     """Set conveyor power asynchronously without blocking callbacks."""
+    #     requested_power = max(0.0, min(100.0, float(power)))
+    #
+    #     if not self.conveyor_client.service_is_ready():
+    #         self.get_logger().error(
+    #             "{} is not ready; cannot set conveyor power to {:.2f}."
+    #             .format(
+    #                 self.conveyor_power_service,
+    #                 requested_power,
+    #             )
+    #         )
+    #         return
+    #
+    #     request = ConveyorBeltControl.Request()
+    #     request.power = requested_power
+    #     future = self.conveyor_client.call_async(request)
+    #
+    #     def response_callback(completed_future) -> None:
+    #         try:
+    #             response = completed_future.result()
+    #         except Exception as exc:
+    #             self.get_logger().error(
+    #                 "Conveyor service call failed: {}".format(exc)
+    #             )
+    #             return
+    #
+    #         if response is not None and response.success:
+    #             self.get_logger().info(
+    #                 "Simulated conveyor power set to {:.2f}."
+    #                 .format(requested_power)
+    #             )
+    #         else:
+    #             self.get_logger().error(
+    #                 "Conveyor plugin rejected power {:.2f}."
+    #                 .format(requested_power)
+    #             )
+    # ----------------------------------------------------------------------
     def set_conveyor_power(self, power: float) -> None:
         """Set conveyor power asynchronously without blocking callbacks."""
-        requested_power = max(0.0, min(100.0, float(power)))
+        requested_power = max(-100.0, min(100.0, float(power)))
 
         if not self.conveyor_client.service_is_ready():
             self.get_logger().error(
@@ -440,9 +568,35 @@ class GazeboStateMirror(Node):
         r, g, b = BALL_RGB[color]
         name = "{}_ball_{}".format(color, cycle_id)
 
+        # ------------------------------------------------------------------
+        # Old method kept for reference:
+        # # Zero friction (0.0) for ejected balls; 0.35 for gripper balls
+        # friction = 0.0 if color in ("green", "black") else 0.35
+        #
+        # # Slightly larger collision radius to ride smoothly over belt seams
+        # collision_radius = self.ball_radius + 0.0015
+        #
+        # sdf = BALL_SDF.format(
+        #     name=name,
+        #     visual_radius=self.ball_radius,
+        #     collision_radius=collision_radius,
+        #     friction=friction,
+        #     r=r,
+        #     g=g,
+        #     b=b,
+        # )
+        # ------------------------------------------------------------------
+        # Zero friction (0.0) for ejected balls; 0.35 for gripper balls
+        friction = 0.0 if color in ("green", "black") else 0.35
+
+        # Slightly larger collision radius to ride smoothly over belt seams
+        collision_radius = self.ball_radius + 0.0015
+
         sdf = BALL_SDF.format(
             name=name,
-            radius=self.ball_radius,
+            visual_radius=self.ball_radius,
+            collision_radius=collision_radius,
+            friction=friction,
             r=r,
             g=g,
             b=b,
