@@ -7,6 +7,10 @@ the conveyor, black balls run all the way forward off the conveyor, and
 green balls get sent back the way they came. Each run sorts exactly four
 balls.
 
+![EV3 manipulator hardware showing the homing switches for the base and pickup-arm encoders](docs/images/manipulator_ev3.png)
+
+*Homing switches for the base and pickup-arm motors — pressing one gives that motor's encoder a known zero point to center its angle from.*
+
 This is done three different ways:
 - **`ev3_manipulator_stage_sync`** — runs the sort cycle on both the
   simulator and the real EV3 brick together, staying in step at every stage.
@@ -15,9 +19,6 @@ This is done three different ways:
 - **`ev3_manipulator_moveit`** (🚧 work in progress) — plans a
   collision-free path for the arm and drives the `live_sync` digital twin
   along it.
-
-![EV3 manipulator hardware showing the homing switches for the base and pickup-arm encoders](docs/images/manipulator_ev3.png)
-*Homing switches for the base and pickup-arm motors — pressing one gives that motor's encoder a known zero point to center its angle from.*
 
 ## Pipeline
 *(GIF coming soon)*
@@ -66,8 +67,12 @@ docker compose -f docker/docker-compose.yml exec ev3-manipulator-dev bash
 # inside:  cb   (colcon build)   then   cs   (source)
 ```
 Requires a native Ubuntu host with an NVIDIA GPU and Docker (+
-[nvidia-container-toolkit](https://github.com/NVIDIA/nvidia-container-toolkit)).
-For ROS 2 Jazzy/Gazebo Harmonic or Isaac Sim instead, see
+[nvidia-container-toolkit](https://github.com/NVIDIA/nvidia-container-toolkit)) — the
+container itself is a plain ROS 2 image; GPU access comes entirely from the toolkit
+passing the host driver through. There's no CPU-only / software-rendering path
+configured yet, so a host without a supported NVIDIA GPU + driver can't run this sim
+stack at all right now.
+For ROS 2 Jazzy/Gazebo Harmonic instead, see
 [docs/development.md](docs/development.md).
 
 To run against real EV3 hardware instead of (or alongside) the sim, flash the
