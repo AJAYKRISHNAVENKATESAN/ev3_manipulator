@@ -115,8 +115,8 @@ BALL_SDF = """<sdf version='1.7'>
         <surface>
           <friction>
             <ode>
-              <mu>{friction}</mu>
-              <mu2>{friction}</mu2>
+              <mu>0.35</mu>
+              <mu2>0.35</mu2>
             </ode>
           </friction>
           <bounce>
@@ -125,10 +125,10 @@ BALL_SDF = """<sdf version='1.7'>
           </bounce>
           <contact>
             <ode>
-              <kp>1000000.0</kp>
+              <kp>100000.0</kp>
               <kd>10.0</kd>
               <max_vel>0.1</max_vel>
-              <min_depth>0.0001</min_depth>
+              <min_depth>0.0005</min_depth>
             </ode>
           </contact>
         </surface>
@@ -184,7 +184,7 @@ class GazeboStateMirror(Node):
         )
         self.declare_parameter("conveyor_pickup_power", 6.0)
         self.declare_parameter("conveyor_black_power", 20.0)
-        self.declare_parameter("conveyor_green_power", -90.0)
+        self.declare_parameter("conveyor_green_power", -20.0)
 
         self.position_joints = [
             str(name)
@@ -586,11 +586,28 @@ class GazeboStateMirror(Node):
         #     b=b,
         # )
         # ------------------------------------------------------------------
-        # Zero friction (0.0) for ejected balls; 0.35 for gripper balls
-        friction = 0.0 if color in ("green", "black") else 0.35
+        # Old friction / radius logic kept for reference:
+        # # Zero friction (0.0) for ejected balls; 0.35 for gripper balls
+        # friction = 0.0 if color in ("green", "black") else 0.35
+        #
+        # # Slightly larger collision radius to ride smoothly over belt seams
+        # collision_radius = self.ball_radius + 0.0015
+        #
+        # sdf = BALL_SDF.format(
+        #     name=name,
+        #     visual_radius=self.ball_radius,
+        #     collision_radius=collision_radius,
+        #     friction=friction,
+        #     r=r,
+        #     g=g,
+        #     b=b,
+        # )
+        # ------------------------------------------------------------------
+        # Standard friction so the belt grips without slipping
+        friction = 0.35
 
-        # Slightly larger collision radius to ride smoothly over belt seams
-        collision_radius = self.ball_radius + 0.0015
+        # Match collision radius exactly to visual radius to prevent clipping into frame walls
+        collision_radius = self.ball_radius
 
         sdf = BALL_SDF.format(
             name=name,
