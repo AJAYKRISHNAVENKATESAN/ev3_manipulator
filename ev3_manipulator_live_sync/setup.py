@@ -30,6 +30,7 @@ setup(
         'console_scripts': [
             'sorting_node = ev3_manipulator_live_sync.sorting_node:main',
             'hardware_interface = ev3_manipulator_live_sync.hardware_interface:main',
+            'sim=ev3_manipulator_live_sync.sim:main'
         ],
     },
 )

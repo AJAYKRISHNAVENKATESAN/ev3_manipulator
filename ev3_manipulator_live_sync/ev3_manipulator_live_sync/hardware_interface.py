@@ -39,13 +39,13 @@ class Ev3StateBridge(Node):
         self.declare_parameter("conveyor_sign", 1.0)
 
         self.declare_parameter("base_zero_offset_rad", 0.0)
-        self.declare_parameter("arm_zero_offset_rad", 0.0)
+        self.declare_parameter("arm_zero_offset_rad", 0.1)
 
         # Calibrate these from the actual open and closed encoder readings.
         self.declare_parameter("gripper_motor_open_deg", 0.0)
         self.declare_parameter("gripper_motor_closed_deg", 90.0)
-        self.declare_parameter("gripper_sim_open", 0.5)
-        self.declare_parameter("gripper_sim_closed", 0.0)
+        self.declare_parameter("gripper_sim_open", 0.0)
+        self.declare_parameter("gripper_sim_closed", 0.3)
 
         self.port = int(self.get_parameter("port").value)
 

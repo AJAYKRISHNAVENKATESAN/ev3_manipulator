@@ -72,11 +72,11 @@ GEAR_ARM = 5.0
 
 # IMPORTANT: verify this value physically. The older file had conflicting
 # comments/logs for 110, 118, and 354 motor degrees.
-BASE_HOME_OFFSET_WORLD_DEG = 110.0
+BASE_HOME_OFFSET_WORLD_DEG = 115.0
 BASE_HOME_OFFSET_MOTOR_DEG = BASE_HOME_OFFSET_WORLD_DEG * GEAR_BASE
 
-Z_CLEARANCE = 50
-PICK_XZ = (-110, -230)
+Z_CLEARANCE = 40
+PICK_XZ = (-110, -240)
 PLACE_XZ = (-200, -250)
 
 BASE_SPEED = 300
@@ -612,7 +612,7 @@ def conveyor_to_pickup():
 def conveyor_black():
     run_angle_streamed(
         conveyor,
-        120,
+        200,
         -650,
         "conveyor black",
     )

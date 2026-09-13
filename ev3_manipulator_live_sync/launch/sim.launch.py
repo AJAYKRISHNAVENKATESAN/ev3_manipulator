@@ -179,7 +179,6 @@ def generate_launch_description():
             clock_bridge,
             robot_state_publisher,
             spawn_robot,
-
             controllers_after_spawn,
             position_after_jsb,
         ]
