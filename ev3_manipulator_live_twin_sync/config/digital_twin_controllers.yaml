@@ -1,0 +1,26 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 100
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    twin_position_controller:
+      type: position_controllers/JointGroupPositionController
+
+    twin_conveyor_controller:
+      type: velocity_controllers/JointGroupVelocityController
+
+# The order here must match gazebo_state_mirror.py -> position_joints.
+twin_position_controller:
+  ros__parameters:
+    joints:
+      - arm_1_base_link_joint
+      - arm_2_left_arm_linkage_joint
+      - gripper_joint
+
+# Replace with the exact conveyor joint from your URDF.
+twin_conveyor_controller:
+  ros__parameters:
+    joints:
+      - conveyor_joint

@@ -11,14 +11,19 @@ balls.
 
 *Homing switches for the base and pickup-arm motors — pressing one gives that motor's encoder a known zero point to center its angle from.*
 
-This is done three different ways:
-- **`ev3_manipulator_stage_sync`** — runs the sort cycle on both the
-  simulator and the real EV3 brick together, staying in step at every stage.
-- **`ev3_manipulator_live_sync`** — a live digital twin: continuously
-  mirrors the real brick's movement into the simulator.
+This is done four different ways:
+- **`ev3_manipulator_stage_sync`** — a digital twin kept in step by an
+  explicit stage state machine: runs the sort cycle on both the simulator
+  and the real EV3 brick together, one stage at a time.
+- **`ev3_manipulator_mirror_sync`** — a live mirror: continuously reflects
+  the real brick's movement into the simulator, with no synchronization
+  barrier.
+- **`ev3_manipulator_live_twin_sync`** — a live digital twin: a
+  `twin_coordinator` keeps the simulator and the real EV3 brick coordinated
+  as a proper digital twin, building on `mirror_sync`.
 - **`ev3_manipulator_moveit`** (🚧 work in progress) — plans a
-  collision-free path for the arm and drives the `live_sync` digital twin
-  along it.
+  collision-free path for the arm and drives the `live_twin_sync` digital
+  twin along it.
 
 ## Pipeline
 *(GIF coming soon)*
@@ -43,7 +48,8 @@ After all four balls are sorted, the cycle ends.
 
 ## Packages
 - [`ev3_manipulator_stage_sync`](ev3_manipulator_stage_sync/README.md)
-- [`ev3_manipulator_live_sync`](ev3_manipulator_live_sync/README.md)
+- [`ev3_manipulator_mirror_sync`](ev3_manipulator_mirror_sync/README.md)
+- [`ev3_manipulator_live_twin_sync`](ev3_manipulator_live_twin_sync/README.md)
 - [`ev3_manipulator_moveit`](ev3_manipulator_moveit/README.md) (🚧 work in progress)
 - [`conveyor_belt/`](conveyor_belt/) — vendored third-party Gazebo-ROS2 conveyor
   belt plugin
@@ -53,7 +59,7 @@ After all four balls are sorted, the cycle ends.
 - **ROS 2** (Humble by default, Jazzy supported) — `ros2_control`, URDF/xacro
 - **Gazebo** (Fortress/Ignition, or Harmonic on Jazzy) for simulation; **Isaac Sim 5.1** as an alternate sim backend
 - **Python** — each package's `sorting_node` and `hardware_interface` nodes
-- **pybricks-micropython** — runs on the physical EV3 brick; talks to `hardware_interface` over TCP (a stage handshake for `stage_sync`, a continuous telemetry stream for `live_sync`)
+- **pybricks-micropython** — runs on the physical EV3 brick; talks to `hardware_interface` over TCP (a stage handshake for `stage_sync`, a continuous telemetry stream for `mirror_sync`/`live_twin_sync`)
 - **MoveIt 2** — scaffolded, not yet integrated
 - **Docker** — containerized, GPU-accelerated dev environments for every stack above
 

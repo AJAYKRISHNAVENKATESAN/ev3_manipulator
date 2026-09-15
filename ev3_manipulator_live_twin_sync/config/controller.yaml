@@ -1,0 +1,31 @@
+controller_manager:
+  ros__parameters:
+    # 100 Hz is enough for an EV3 stream around 20–50 Hz.
+    # You can use 1000 only if Gazebo and your computer reliably sustain it.
+    update_rate: 100
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    # Directly mirrors EV3 base, arm and gripper positions.
+    twin_position_controller:
+      type: position_controllers/JointGroupPositionController
+
+    # Rotates the visible conveyor pulley.
+    # conveyor_controller:
+    #   type: velocity_controllers/JointGroupVelocityController
+
+
+# Order must exactly match position_joints in gazebo_state_mirror.py.
+twin_position_controller:
+  ros__parameters:
+    joints:
+      - arm1_base_link_joint
+      - arm1_arm2_joint
+      - left_gear_arm4_joint
+
+
+# conveyor_controller:
+#   ros__parameters:
+#     joints:
+#       - conveyor_left_pulley_joint
