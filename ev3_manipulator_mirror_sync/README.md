@@ -1,15 +1,16 @@
-# ev3_manipulator_live_sync
+# ev3_manipulator_mirror_sync
 
 ROS 2 package that mirrors a physical LEGO Mindstorms EV3 brick's live
-encoder telemetry into a Gazebo digital twin — a pure mirror, with no stage
-handshake or sync barrier.
+encoder telemetry into the Gazebo simulator — a pure mirror, with no stage
+handshake or sync barrier. See `ev3_manipulator_live_twin_sync` for the
+coordinated digital twin built on top of this mirror.
 
 ## Layout
 Same shape as `stage_sync`: URDF/xacro, meshes, Gazebo sim launch,
 `ros2_control`, dev `tools/`, and the `sorting_node` / `hardware_interface`
 nodes. Here, `hardware_interface` receives a continuous EV3 telemetry stream
 instead of a stage handshake, and `sorting_node` mirrors it straight into the
-sim with no synchronization barrier. `ev3_manipulator_live_sync_firmware/`
+sim with no synchronization barrier. `ev3_manipulator_mirror_sync_firmware/`
 is its EV3-side counterpart — **not a ROS 2 package** (colcon-ignored).
 
 ## Architecture
@@ -19,7 +20,7 @@ flowchart LR
         HI["hardware_interface<br/>(TCP telemetry bridge)"]
         SN["sorting_node<br/>(Gazebo state mirror)"]
     end
-    BRICK["EV3 brick<br/>ev3_manipulator_live_sync_firmware/sorting.py<br/>(pybricks-micropython)"]
+    BRICK["EV3 brick<br/>ev3_manipulator_mirror_sync_firmware/sorting.py<br/>(pybricks-micropython)"]
     SIM["Gazebo sim<br/>(position controller +<br/>conveyor plugin)"]
 
     BRICK -- "continuous encoder telemetry<br/>+ event notifications" --> HI

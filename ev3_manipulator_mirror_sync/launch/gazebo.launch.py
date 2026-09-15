@@ -20,7 +20,7 @@ import os
 
 
 def generate_launch_description():
-    pkg_name = "ev3_manipulator_live_sync"
+    pkg_name = "ev3_manipulator_mirror_sync"
     pkg_share = get_package_share_directory(pkg_name)
     
     conveyor_plugin_lib = os.path.join(
@@ -97,7 +97,7 @@ def generate_launch_description():
         executable="create",
         arguments=[
             "-entity",
-            "ev3_manipulator_live_sync",
+            "ev3_manipulator_mirror_sync",
             "-topic",
             "robot_description",
         ],

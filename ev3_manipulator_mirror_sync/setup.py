@@ -2,7 +2,7 @@ from setuptools import setup
 import os
 from glob import glob
 
-package_name = 'ev3_manipulator_live_sync'
+package_name = 'ev3_manipulator_mirror_sync'
 
 setup(
     name=package_name,
@@ -28,9 +28,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'sorting_node = ev3_manipulator_live_sync.sorting_node:main',
-            'hardware_interface = ev3_manipulator_live_sync.hardware_interface:main',
-            'sim=ev3_manipulator_live_sync.sim:main'
+            'sorting_node = ev3_manipulator_mirror_sync.sorting_node:main',
+            'hardware_interface = ev3_manipulator_mirror_sync.hardware_interface:main'
         ],
     },
 )
