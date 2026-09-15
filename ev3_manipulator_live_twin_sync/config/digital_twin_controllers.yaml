@@ -1,26 +1,524 @@
-controller_manager:
+# # hardware_interface:
+# #   ros__parameters:
+# #     port: 5005
+
+# #     base_joint: arm1_base_link_joint
+# #     arm_joint: arm1_arm2_joint
+# #     gripper_joint: left_gear_arm4_joint
+# #     conveyor_joint: conveyor_left_pulley_joint
+
+# #     # Physical EV3 -> canonical Gazebo calibration.
+# #     # These preserve the working calibration from your current launch.
+# #     base_gear_ratio: 3.0
+# #     arm_gear_ratio: 5.0
+# #     conveyor_gear_ratio: 1.0
+
+# #     base_sign: 1.0
+# #     arm_sign: 1.0
+# #     gripper_sign: 1.0
+# #     conveyor_sign: 1.0
+
+# #     base_scale: 1.0
+# #     arm_scale: 0.249
+# #     conveyor_scale: 1.0
+
+# #     base_zero_offset_rad: 0.0
+# #     arm_zero_offset_rad: -0.2
+
+# #     base_sim_min_rad: -1.57079632679
+# #     base_sim_max_rad: 1.57079632679
+# #     arm_sim_min_rad: -1.57079632679
+# #     arm_sim_max_rad: 1.57079632679
+
+# #     gripper_motor_open_deg: 0.0
+# #     gripper_motor_closed_deg: 90.0
+# #     gripper_sim_open: -0.35
+# #     gripper_sim_closed: 0.35
+
+# #     # Measured physical state stays untouched at EV3 telemetry rate (~20 Hz).
+# #     physical_joint_state_topic: /twin/physical/joint_states
+
+# #     # Gazebo follows this short-horizon predicted stream at 50 Hz.
+# #     physical_live_joint_state_topic: /twin/physical/live_joint_states
+# #     live_publish_rate_hz: 50.0
+# #     live_prediction_horizon_sec: 0.06
+# #     live_state_timeout_sec: 0.75
+# #     live_velocity_deadband_rad_s: 0.01
+
+# #     physical_event_topic: /twin/physical/events
+# #     physical_connected_topic: /twin/physical/connected
+# #     physical_conveyor_velocity_topic: /twin/physical/conveyor_velocity
+# #     physical_raw_state_topic: /twin/physical/raw_state
+
+# #     # Must match the EV3 run_angle() commands exactly.
+# #     conveyor_to_pickup_delta_deg: -300.0
+# #     conveyor_black_delta_deg: -750.0
+# #     conveyor_green_delta_deg: 300.0
+# #     physical_conveyor_progress_topic: /twin/physical/conveyor_progress
+# #     physical_conveyor_action_topic: /twin/physical/conveyor_action
+
+
+# # gazebo_twin_interface:
+# #   ros__parameters:
+# #     source_joints:
+# #       - arm1_base_link_joint
+# #       - arm1_arm2_joint
+# #       - left_gear_arm4_joint
+
+# #     physical_live_joint_state_topic: /twin/physical/live_joint_states
+# #     physical_event_topic: /twin/physical/events
+# #     physical_connected_topic: /twin/physical/connected
+# #     physical_conveyor_progress_topic: /twin/physical/conveyor_progress
+
+# #     position_command_topic: /twin_position_controller/commands
+# #     gazebo_joint_state_topic: /joint_states
+# #     sim_joint_state_topic: /twin/sim/joint_states
+# #     sim_ball_state_topic: /twin/sim/ball_state
+
+# #     command_rate_hz: 50.0
+# #     state_timeout_sec: 0.75
+
+# #     ball_radius: 0.014
+# #     spawn_x: -0.154099
+# #     spawn_y: 0.233
+# #     # Preserve the value from your working launch.
+# #     spawn_z: 0.0581
+
+# #     pickup_x: -0.020859
+
+# #     # Derived from the current simulated conveyor extents, with about 3 cm
+# #     # margin beyond the belt. Fine-tune these once visually if required.
+# #     green_reject_x: -0.205
+# #     black_reject_x: 0.181
+
+# #     set_pose_service: /world/default/set_pose
+# #     ball_pose_rate_hz: 20.0
+# #     ball_pose_service_timeout_sec: 2.0
+
+
+# # twin_coordinator:
+# #   ros__parameters:
+# #     physical_joint_state_topic: /twin/physical/joint_states
+# #     sim_joint_state_topic: /twin/sim/joint_states
+# #     physical_connected_topic: /twin/physical/connected
+# #     physical_event_topic: /twin/physical/events
+# #     physical_conveyor_progress_topic: /twin/physical/conveyor_progress
+# #     sim_ball_state_topic: /twin/sim/ball_state
+
+# #     physical_joints:
+# #       - arm1_base_link_joint
+# #       - arm1_arm2_joint
+# #       - left_gear_arm4_joint
+# #     sim_joints:
+# #       - arm1_base_link_joint
+# #       - arm1_arm2_joint
+# #       - left_gear_arm4_joint
+
+# #     base_tolerance_rad: 0.03
+# #     arm_tolerance_rad: 0.03
+# #     gripper_tolerance_rad: 0.02
+
+# #     transport_progress_tolerance: 0.10
+# #     transport_terminal_tolerance: 0.03
+
+# #     # Slightly more tolerant than before to avoid false stale transitions
+# #     # from transient Gazebo / EV3 scheduling delays.
+# #     state_timeout_sec: 0.75
+# #     sim_state_timeout_sec: 1.25
+# #     status_rate_hz: 20.0
+
+
+# hardware_interface:
+#   ros__parameters:
+#     port: 5005
+
+#     base_joint: arm1_base_link_joint
+#     arm_joint: arm1_arm2_joint
+#     gripper_joint: left_gear_arm4_joint
+#     conveyor_joint: conveyor_left_pulley_joint
+
+#     # Physical EV3 -> canonical Gazebo calibration.
+#     # These preserve the working calibration from your current launch.
+#     base_gear_ratio: 3.0
+#     arm_gear_ratio: 5.0
+#     conveyor_gear_ratio: 1.0
+
+#     base_sign: 1.0
+#     arm_sign: 1.0
+#     gripper_sign: 1.0
+#     conveyor_sign: 1.0
+
+#     base_scale: 1.0
+#     arm_scale: 0.249
+#     conveyor_scale: 1.0
+
+#     base_zero_offset_rad: 0.0
+#     arm_zero_offset_rad: -0.2
+
+#     base_sim_min_rad: -1.57079632679
+#     base_sim_max_rad: 1.57079632679
+#     arm_sim_min_rad: -1.57079632679
+#     arm_sim_max_rad: 1.57079632679
+
+#     gripper_motor_open_deg: 0.0
+#     gripper_motor_closed_deg: 90.0
+#     gripper_sim_open: -0.35
+#     gripper_sim_closed: 0.35
+
+#     # Measured physical state stays untouched at EV3 telemetry rate (~20 Hz).
+#     physical_joint_state_topic: /twin/physical/joint_states
+
+#     # Gazebo follows this short-horizon predicted stream at 50 Hz.
+#     physical_live_joint_state_topic: /twin/physical/live_joint_states
+#     live_publish_rate_hz: 50.0
+#     live_prediction_horizon_sec: 0.06
+#     live_state_timeout_sec: 0.75
+#     live_velocity_deadband_rad_s: 0.01
+
+#     physical_event_topic: /twin/physical/events
+#     physical_connected_topic: /twin/physical/connected
+#     physical_conveyor_velocity_topic: /twin/physical/conveyor_velocity
+#     physical_raw_state_topic: /twin/physical/raw_state
+
+#     # Must match the EV3 run_angle() commands exactly.
+#     conveyor_to_pickup_delta_deg: -300.0
+#     conveyor_black_delta_deg: -750.0
+#     conveyor_green_delta_deg: 300.0
+#     physical_conveyor_progress_topic: /twin/physical/conveyor_progress
+#     physical_conveyor_action_topic: /twin/physical/conveyor_action
+
+
+# gazebo_twin_interface:
+#   ros__parameters:
+#     source_joints:
+#       - arm1_base_link_joint
+#       - arm1_arm2_joint
+#       - left_gear_arm4_joint
+
+#     physical_live_joint_state_topic: /twin/physical/live_joint_states
+#     physical_event_topic: /twin/physical/events
+#     physical_connected_topic: /twin/physical/connected
+#     physical_conveyor_progress_topic: /twin/physical/conveyor_progress
+
+#     position_command_topic: /twin_position_controller/commands
+#     gazebo_joint_state_topic: /joint_states
+#     sim_joint_state_topic: /twin/sim/joint_states
+#     sim_ball_state_topic: /twin/sim/ball_state
+
+#     command_rate_hz: 50.0
+#     state_timeout_sec: 0.75
+
+#     ball_radius: 0.014
+#     spawn_x: -0.154099
+#     spawn_y: 0.233
+#     # Preserve the value from your working launch.
+#     spawn_z: 0.0581
+
+#     pickup_x: -0.020859
+
+#     # Derived from the current simulated conveyor extents, with about 3 cm
+#     # margin beyond the belt. Fine-tune these once visually if required.
+#     green_reject_x: -0.205
+#     black_reject_x: 0.181
+
+#     set_pose_service: /world/empty/set_pose
+#     ball_pose_rate_hz: 20.0
+#     ball_pose_service_timeout_sec: 2.0
+
+
+# twin_coordinator:
+#   ros__parameters:
+#     physical_joint_state_topic: /twin/physical/joint_states
+#     sim_joint_state_topic: /twin/sim/joint_states
+#     physical_connected_topic: /twin/physical/connected
+#     physical_event_topic: /twin/physical/events
+#     physical_conveyor_progress_topic: /twin/physical/conveyor_progress
+#     sim_ball_state_topic: /twin/sim/ball_state
+
+#     physical_joints:
+#       - arm1_base_link_joint
+#       - arm1_arm2_joint
+#       - left_gear_arm4_joint
+#     sim_joints:
+#       - arm1_base_link_joint
+#       - arm1_arm2_joint
+#       - left_gear_arm4_joint
+
+#     base_tolerance_rad: 0.03
+#     arm_tolerance_rad: 0.03
+#     gripper_tolerance_rad: 0.02
+
+#     transport_progress_tolerance: 0.10
+#     transport_terminal_tolerance: 0.03
+
+#     # Slightly more tolerant than before to avoid false stale transitions
+#     # from transient Gazebo / EV3 scheduling delays.
+#     state_timeout_sec: 0.75
+#     sim_state_timeout_sec: 1.25
+#     status_rate_hz: 20.0
+
+
+# hardware_interface:
+#   ros__parameters:
+#     port: 5005
+
+#     base_joint: arm1_base_link_joint
+#     arm_joint: arm1_arm2_joint
+#     gripper_joint: left_gear_arm4_joint
+#     conveyor_joint: conveyor_left_pulley_joint
+
+#     # Physical EV3 -> canonical Gazebo calibration.
+#     # These preserve the working calibration from your current launch.
+#     base_gear_ratio: 3.0
+#     arm_gear_ratio: 5.0
+#     conveyor_gear_ratio: 1.0
+
+#     base_sign: 1.0
+#     arm_sign: 1.0
+#     gripper_sign: 1.0
+#     conveyor_sign: 1.0
+
+#     base_scale: 1.0
+#     arm_scale: 0.249
+#     conveyor_scale: 1.0
+
+#     base_zero_offset_rad: 0.0
+#     arm_zero_offset_rad: -0.2
+
+#     base_sim_min_rad: -1.57079632679
+#     base_sim_max_rad: 1.57079632679
+#     arm_sim_min_rad: -1.57079632679
+#     arm_sim_max_rad: 1.57079632679
+
+#     gripper_motor_open_deg: 0.0
+#     gripper_motor_closed_deg: 90.0
+#     gripper_sim_open: -0.35
+#     gripper_sim_closed: 0.35
+
+#     # Measured physical state stays untouched at EV3 telemetry rate (~20 Hz).
+#     physical_joint_state_topic: /twin/physical/joint_states
+
+#     # Gazebo follows this short-horizon predicted stream at 50 Hz.
+#     physical_live_joint_state_topic: /twin/physical/live_joint_states
+#     live_publish_rate_hz: 50.0
+#     live_prediction_horizon_sec: 0.06
+#     live_state_timeout_sec: 0.75
+#     live_velocity_deadband_rad_s: 0.01
+
+#     physical_event_topic: /twin/physical/events
+#     physical_connected_topic: /twin/physical/connected
+#     physical_conveyor_velocity_topic: /twin/physical/conveyor_velocity
+#     physical_raw_state_topic: /twin/physical/raw_state
+
+#     # Must match the EV3 run_angle() commands exactly.
+#     conveyor_to_pickup_delta_deg: -300.0
+#     conveyor_black_delta_deg: -750.0
+#     conveyor_green_delta_deg: 300.0
+#     physical_conveyor_progress_topic: /twin/physical/conveyor_progress
+#     physical_conveyor_action_topic: /twin/physical/conveyor_action
+
+
+# gazebo_twin_interface:
+#   ros__parameters:
+#     source_joints:
+#       - arm1_base_link_joint
+#       - arm1_arm2_joint
+#       - left_gear_arm4_joint
+
+#     physical_live_joint_state_topic: /twin/physical/live_joint_states
+#     physical_event_topic: /twin/physical/events
+#     physical_connected_topic: /twin/physical/connected
+#     physical_conveyor_progress_topic: /twin/physical/conveyor_progress
+
+#     position_command_topic: /twin_position_controller/commands
+#     gazebo_joint_state_topic: /joint_states
+#     sim_joint_state_topic: /twin/sim/joint_states
+#     sim_ball_state_topic: /twin/sim/ball_state
+
+#     command_rate_hz: 50.0
+#     state_timeout_sec: 0.75
+
+#     ball_radius: 0.014
+#     spawn_x: -0.154099
+#     spawn_y: 0.233
+#     # Preserve the value from your working launch.
+#     spawn_z: 0.0581
+
+#     pickup_x: -0.020859
+
+#     # Derived from the current simulated conveyor extents, with about 3 cm
+#     # margin beyond the belt. Fine-tune these once visually if required.
+#     # Left side has support / rail geometry beyond the pulley; use a
+#     # clearly outside deterministic endpoint rather than a marginal one.
+#     green_reject_x: -0.260
+#     black_reject_x: 0.181
+
+#     set_pose_service: /world/empty/set_pose
+#     ball_pose_rate_hz: 20.0
+#     ball_pose_service_timeout_sec: 2.0
+
+#     # Logical grasp: arm_4_1 is the rigid gripper body in the URDF.
+#     attach_world_frame: world
+#     attach_frame: arm_4_1
+
+
+# twin_coordinator:
+#   ros__parameters:
+#     physical_joint_state_topic: /twin/physical/joint_states
+#     sim_joint_state_topic: /twin/sim/joint_states
+#     physical_connected_topic: /twin/physical/connected
+#     physical_event_topic: /twin/physical/events
+#     physical_conveyor_progress_topic: /twin/physical/conveyor_progress
+#     sim_ball_state_topic: /twin/sim/ball_state
+
+#     physical_joints:
+#       - arm1_base_link_joint
+#       - arm1_arm2_joint
+#       - left_gear_arm4_joint
+#     sim_joints:
+#       - arm1_base_link_joint
+#       - arm1_arm2_joint
+#       - left_gear_arm4_joint
+
+#     base_tolerance_rad: 0.03
+#     arm_tolerance_rad: 0.03
+#     gripper_tolerance_rad: 0.02
+
+#     transport_progress_tolerance: 0.10
+#     transport_terminal_tolerance: 0.03
+
+#     # Slightly more tolerant than before to avoid false stale transitions
+#     # from transient Gazebo / EV3 scheduling delays.
+#     state_timeout_sec: 0.75
+#     sim_state_timeout_sec: 1.25
+#     status_rate_hz: 20.0
+
+hardware_interface:
   ros__parameters:
-    update_rate: 100
+    port: 5005
 
-    joint_state_broadcaster:
-      type: joint_state_broadcaster/JointStateBroadcaster
+    base_joint: arm1_base_link_joint
+    arm_joint: arm1_arm2_joint
+    gripper_joint: left_gear_arm4_joint
+    conveyor_joint: conveyor_left_pulley_joint
 
-    twin_position_controller:
-      type: position_controllers/JointGroupPositionController
+    base_gear_ratio: 3.0
+    arm_gear_ratio: 5.0
+    conveyor_gear_ratio: 1.0
 
-    twin_conveyor_controller:
-      type: velocity_controllers/JointGroupVelocityController
+    base_sign: 1.0
+    arm_sign: 1.0
+    gripper_sign: 1.0
+    conveyor_sign: 1.0
 
-# The order here must match gazebo_state_mirror.py -> position_joints.
-twin_position_controller:
+    base_scale: 1.0
+
+    # EV3 home -> sim -0.200 rad
+    # EV3 full PICK_DOWN -> sim +0.115 rad
+    # Total simulated pitch travel = 0.315 rad.
+    arm_scale: 0.277803959
+
+    conveyor_scale: 1.0
+
+    base_zero_offset_rad: 0.0
+    arm_zero_offset_rad: -0.200
+
+    base_sim_min_rad: -1.57079632679
+    base_sim_max_rad: 1.57079632679
+    arm_sim_min_rad: -0.200
+    arm_sim_max_rad: 0.115
+
+    # Simulation-side gripper endpoints only.
+    # Physical EV3 encoder calibration remains in hardware_interface.py.
+    gripper_sim_open: -0.30
+    gripper_sim_closed: 0.35
+
+    physical_joint_state_topic: /twin/physical/joint_states
+    physical_live_joint_state_topic: /twin/physical/live_joint_states
+
+    live_publish_rate_hz: 50.0
+    live_prediction_horizon_sec: 0.0
+    live_interpolation_delay_sec: 0.05
+    live_state_timeout_sec: 0.75
+    live_velocity_deadband_rad_s: 0.01
+
+    physical_event_topic: /twin/physical/events
+    physical_connected_topic: /twin/physical/connected
+    physical_conveyor_velocity_topic: /twin/physical/conveyor_velocity
+    physical_raw_state_topic: /twin/physical/raw_state
+
+    # These are twin interpretation values and must match the current EV3
+    # conveyor run_angle() travel.
+    conveyor_to_pickup_delta_deg: -310.0
+    conveyor_black_delta_deg: -750.0
+    conveyor_green_delta_deg: 300.0
+    physical_conveyor_progress_topic: /twin/physical/conveyor_progress
+    physical_conveyor_action_topic: /twin/physical/conveyor_action
+
+
+gazebo_twin_interface:
   ros__parameters:
-    joints:
-      - arm_1_base_link_joint
-      - arm_2_left_arm_linkage_joint
-      - gripper_joint
+    source_joints:
+      - arm1_base_link_joint
+      - arm1_arm2_joint
+      - left_gear_arm4_joint
 
-# Replace with the exact conveyor joint from your URDF.
-twin_conveyor_controller:
+    physical_live_joint_state_topic: /twin/physical/live_joint_states
+    physical_event_topic: /twin/physical/events
+    physical_connected_topic: /twin/physical/connected
+    physical_conveyor_progress_topic: /twin/physical/conveyor_progress
+
+    position_command_topic: /twin_position_controller/commands
+    gazebo_joint_state_topic: /joint_states
+    sim_joint_state_topic: /twin/sim/joint_states
+    sim_ball_state_topic: /twin/sim/ball_state
+
+    command_rate_hz: 50.0
+    state_timeout_sec: 0.75
+
+    ball_radius: 0.014
+    spawn_x: -0.154099
+    spawn_y: 0.233
+    spawn_z: 0.0581
+    pickup_x: -0.020859
+
+    green_reject_x: -0.260
+    black_reject_x: 0.181
+
+    set_pose_service: /world/empty/set_pose
+    ball_pose_rate_hz: 20.0
+    ball_pose_service_timeout_sec: 2.0
+
+    attach_world_frame: world
+    attach_frame: arm_4_1
+
+
+
+twin_coordinator:
   ros__parameters:
-    joints:
-      - conveyor_joint
+    physical_joint_state_topic: /twin/physical/joint_states
+    sim_joint_state_topic: /twin/sim/joint_states
+    physical_connected_topic: /twin/physical/connected
+    physical_event_topic: /twin/physical/events
+    physical_conveyor_progress_topic: /twin/physical/conveyor_progress
+    sim_ball_state_topic: /twin/sim/ball_state
+
+    physical_joints:
+      - arm1_base_link_joint
+      - arm1_arm2_joint
+      - left_gear_arm4_joint
+    sim_joints:
+      - arm1_base_link_joint
+      - arm1_arm2_joint
+      - left_gear_arm4_joint
+
+    base_tolerance_rad: 0.03
+    arm_tolerance_rad: 0.03
+    gripper_tolerance_rad: 0.02
+
+    transport_progress_tolerance: 0.10
+    transport_terminal_tolerance: 0.03
+
+    state_timeout_sec: 0.75
+    sim_state_timeout_sec: 1.25
+    status_rate_hz: 20.0

@@ -12,6 +12,7 @@
   <depend>robot_state_publisher</depend>
   <depend>joint_state_publisher</depend>
   <depend>joint_state_publisher_gui</depend>
+  <depend>tf2_ros</depend>
 
   <!-- Gazebo sim + ros2_control (Fortress/Ignition on Humble, Harmonic on Jazzy) -->
   <depend>ros_gz_sim</depend>

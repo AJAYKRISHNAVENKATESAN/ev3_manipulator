@@ -1,890 +1,1156 @@
-#!/usr/bin/env python3
-# """TCP -> ROS 2 bridge for an EV3 state-mirroring digital twin.
-
-# Receives continuous EV3 encoder telemetry and publishes ROS JointState.
-# Semantic events are forwarded separately. There is no stage barrier and no
-# simulation acknowledgement path.
-# """
-
-# import math
-# import queue
-# import socket
-# import threading
-# from typing import Optional
-
-# import rclpy
-# from rclpy.node import Node
-# from sensor_msgs.msg import JointState
-# from std_msgs.msg import Bool, Float64, String
-
-
-# class Ev3StateBridge(Node):
-#     def __init__(self):
-#         super().__init__("ev3_state_bridge")
-
-#         self.declare_parameter("port", 5005)
-#         self.declare_parameter("base_joint", "arm_1_base_link_joint")
-#         self.declare_parameter("arm_joint", "arm_2_left_arm_linkage_joint")
-#         self.declare_parameter("gripper_joint", "gripper_joint")
-#         self.declare_parameter("conveyor_joint", "conveyor_joint")
-
-#         self.declare_parameter("base_gear_ratio", 3.0)
-#         self.declare_parameter("arm_gear_ratio", 5.0)
-#         self.declare_parameter("arm_scale", 1.0)
-#         self.declare_parameter("conveyor_gear_ratio", 1.0)
-
-#         self.declare_parameter("base_sign", 1.0)
-#         self.declare_parameter("arm_sign", 1.0)
-#         self.declare_parameter("gripper_sign", 1.0)
-#         self.declare_parameter("conveyor_sign", 1.0)
-
-#         self.declare_parameter("base_zero_offset_rad", 0.0)
-#         self.declare_parameter("arm_zero_offset_rad", 0.0)
-
-#         # Calibrate these from the actual open and closed encoder readings.
-#         self.declare_parameter("gripper_motor_open_deg", 0.0)
-#         self.declare_parameter("gripper_motor_closed_deg", 90.0)
-#         self.declare_parameter("gripper_sim_open", 0.0)
-#         self.declare_parameter("gripper_sim_closed", 0.3)
-
-#         self.port = int(self.get_parameter("port").value)
-
-#         self.joint_names = [
-#             str(self.get_parameter("base_joint").value),
-#             str(self.get_parameter("arm_joint").value),
-#             str(self.get_parameter("gripper_joint").value),
-#             str(self.get_parameter("conveyor_joint").value),
-#         ]
-
-#         self.base_gear = float(self.get_parameter("base_gear_ratio").value)
-#         self.arm_gear = float(self.get_parameter("arm_gear_ratio").value)
-#         self.arm_scale = float(self.get_parameter("arm_scale").value)
-#         self.conveyor_gear = float(
-#             self.get_parameter("conveyor_gear_ratio").value
-#         )
-
-#         self.base_sign = float(self.get_parameter("base_sign").value)
-#         self.arm_sign = float(self.get_parameter("arm_sign").value)
-#         self.gripper_sign = float(self.get_parameter("gripper_sign").value)
-#         self.conveyor_sign = float(
-#             self.get_parameter("conveyor_sign").value
-#         )
-
-#         self.base_zero = float(
-#             self.get_parameter("base_zero_offset_rad").value
-#         )
-#         self.arm_zero = float(
-#             self.get_parameter("arm_zero_offset_rad").value
-#         )
-
-#         self.gripper_motor_open = float(
-#             self.get_parameter("gripper_motor_open_deg").value
-#         )
-#         self.gripper_motor_closed = float(
-#             self.get_parameter("gripper_motor_closed_deg").value
-#         )
-#         self.gripper_sim_open = float(
-#             self.get_parameter("gripper_sim_open").value
-#         )
-#         self.gripper_sim_closed = float(
-#             self.get_parameter("gripper_sim_closed").value
-#         )
-
-#         self.joint_state_pub = self.create_publisher(
-#             JointState,
-#             "/digital_twin/joint_states",
-#             20,
-#         )
-#         self.event_pub = self.create_publisher(
-#             String,
-#             "/digital_twin/events",
-#             20,
-#         )
-#         self.connected_pub = self.create_publisher(
-#             Bool,
-#             "/digital_twin/connected",
-#             1,
-#         )
-#         self.conveyor_velocity_pub = self.create_publisher(
-#             Float64,
-#             "/digital_twin/conveyor_velocity",
-#             20,
-#         )
-#         self.raw_state_pub = self.create_publisher(
-#             String,
-#             "/digital_twin/raw_state",
-#             20,
-#         )
-
-#         self.line_queue: queue.Queue[tuple[str, Optional[str]]] = queue.Queue()
-#         self.shutdown_event = threading.Event()
-#         self.server: Optional[socket.socket] = None
-#         self.client: Optional[socket.socket] = None
-
-#         self.listener_thread = threading.Thread(
-#             target=self.listen_loop,
-#             daemon=True,
-#         )
-#         self.listener_thread.start()
-
-#         self.create_timer(0.01, self.drain_queue)
-#         self.publish_connection(False)
-
-#         self.get_logger().info(
-#             "Arm mapping: q_sim = {:.6f} + ({:.6f}) * "
-#             "radians(motor_deg / {:.6f})".format(
-#                 self.arm_zero,
-#                 self.arm_sign * self.arm_scale,
-#                 self.arm_gear,
-#             )
-#         )
-
-#     @staticmethod
-#     def motor_deg_to_joint_rad(
-#         motor_deg: float,
-#         gear_ratio: float,
-#         sign: float,
-#         zero_offset_rad: float = 0.0,
-#         scale: float = 1.0,
-#     ) -> float:
-#         if gear_ratio == 0.0:
-#             raise ValueError("gear_ratio must not be zero")
-
-#         return (
-#             zero_offset_rad
-#             + sign * scale * math.radians(motor_deg / gear_ratio)
-#         )
-
-#     @staticmethod
-#     def motor_dps_to_joint_rad_s(
-#         motor_dps: float,
-#         gear_ratio: float,
-#         sign: float,
-#         scale: float = 1.0,
-#     ) -> float:
-#         if gear_ratio == 0.0:
-#             raise ValueError("gear_ratio must not be zero")
-
-#         return sign * scale * math.radians(motor_dps / gear_ratio)
-
-#     def map_gripper_position(self, motor_deg: float) -> float:
-#         denominator = self.gripper_motor_closed - self.gripper_motor_open
-
-#         if abs(denominator) < 1e-9:
-#             raise ValueError(
-#                 "gripper_motor_open_deg and gripper_motor_closed_deg "
-#                 "must be different"
-#             )
-
-#         fraction = (motor_deg - self.gripper_motor_open) / denominator
-#         fraction = max(0.0, min(1.0, fraction))
-
-#         value = self.gripper_sim_open + fraction * (
-#             self.gripper_sim_closed - self.gripper_sim_open
-#         )
-#         return self.gripper_sign * value
-
-#     def map_gripper_velocity(self, motor_dps: float) -> float:
-#         denominator = self.gripper_motor_closed - self.gripper_motor_open
-
-#         if abs(denominator) < 1e-9:
-#             return 0.0
-
-#         slope = (
-#             self.gripper_sim_closed - self.gripper_sim_open
-#         ) / denominator
-#         return self.gripper_sign * motor_dps * slope
-
-#     def publish_connection(self, connected: bool) -> None:
-#         msg = Bool()
-#         msg.data = connected
-#         self.connected_pub.publish(msg)
-
-#     def listen_loop(self) -> None:
-#         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-#         self.server.bind(("0.0.0.0", self.port))
-#         self.server.listen(1)
-#         self.server.settimeout(1.0)
-
-#         while rclpy.ok() and not self.shutdown_event.is_set():
-#             self.get_logger().info(
-#                 "Awaiting EV3 state stream on TCP port {}...".format(
-#                     self.port
-#                 )
-#             )
-
-#             try:
-#                 client, address = self.server.accept()
-#             except socket.timeout:
-#                 continue
-#             except OSError:
-#                 break
-
-#             self.client = client
-
-#             try:
-#                 client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-#                 client.settimeout(5.0)
-#                 reader = client.makefile("r", encoding="utf-8", newline="\n")
-
-#                 handshake = reader.readline().strip()
-
-#                 if handshake != "EV3_CONNECT_REQUEST":
-#                     raise RuntimeError(
-#                         "Invalid handshake token: {!r}".format(handshake)
-#                     )
-
-#                 client.sendall(b"ROS_CONNECT_ACCEPT\n")
-#                 client.settimeout(None)
-#                 self.line_queue.put(("CONNECTED", str(address)))
-
-#                 for raw_line in reader:
-#                     line = raw_line.strip()
-#                     if line:
-#                         self.line_queue.put(("LINE", line))
-
-#             except (OSError, RuntimeError) as exc:
-#                 self.line_queue.put(("ERROR", str(exc)))
-
-#             finally:
-#                 try:
-#                     client.close()
-#                 except OSError:
-#                     pass
-
-#                 self.client = None
-#                 self.line_queue.put(("DISCONNECTED", None))
-
-#     def drain_queue(self) -> None:
-#         while True:
-#             try:
-#                 kind, payload = self.line_queue.get_nowait()
-#             except queue.Empty:
-#                 return
-
-#             if kind == "CONNECTED":
-#                 self.publish_connection(True)
-#                 self.get_logger().info("EV3 connected from {}".format(payload))
-#             elif kind == "DISCONNECTED":
-#                 self.publish_connection(False)
-#                 self.get_logger().warning("EV3 disconnected")
-#             elif kind == "ERROR":
-#                 self.get_logger().error("EV3 TCP error: {}".format(payload))
-#             elif kind == "LINE" and payload is not None:
-#                 self.process_line(payload)
-
-#     def process_line(self, line: str) -> None:
-#         if line.startswith("STATE|"):
-#             self.process_state(line)
-#             return
-
-#         if line.startswith("EVENT|"):
-#             msg = String()
-#             msg.data = line
-#             self.event_pub.publish(msg)
-#             self.get_logger().info("EV3 event: {}".format(line))
-#             return
-
-#         self.get_logger().warning("Unknown EV3 packet: {}".format(line))
-
-#     def process_state(self, line: str) -> None:
-#         parts = line.split("|")
-
-#         if len(parts) != 15:
-#             self.get_logger().warning(
-#                 "Malformed STATE packet: expected 15 fields, got {}: {}".format(
-#                     len(parts),
-#                     line,
-#                 )
-#             )
-#             return
-
-#         try:
-#             _sequence = int(parts[1])
-#             _ev3_ms = int(parts[2])
-
-#             base_pos_deg = float(parts[3])
-#             base_vel_dps = float(parts[4])
-#             arm_pos_deg = float(parts[5])
-#             arm_vel_dps = float(parts[6])
-#             gripper_pos_deg = float(parts[7])
-#             gripper_vel_dps = float(parts[8])
-#             conveyor_pos_deg = float(parts[9])
-#             conveyor_vel_dps = float(parts[10])
-
-#             _arm_home = bool(int(parts[11]))
-#             _base_home = bool(int(parts[12]))
-#             _color = parts[13]
-#             _action = parts[14]
-#         except ValueError as exc:
-#             self.get_logger().warning(
-#                 "Could not parse STATE packet: {} ({})".format(line, exc)
-#             )
-#             return
-
-#         base_pos = self.motor_deg_to_joint_rad(
-#             base_pos_deg,
-#             self.base_gear,
-#             self.base_sign,
-#             self.base_zero,
-#         )
-#         arm_pos = self.motor_deg_to_joint_rad(
-#             arm_pos_deg,
-#             self.arm_gear,
-#             self.arm_sign,
-#             self.arm_zero,
-#             self.arm_scale,
-#         )
-#         # Clamp arm2 (pitching arm) to ±0.115 rad
-#         arm_pos = max(-0.115, min(0.115, arm_pos))
-#         gripper_pos = self.map_gripper_position(gripper_pos_deg)
-#         conveyor_pos = self.motor_deg_to_joint_rad(
-#             conveyor_pos_deg,
-#             self.conveyor_gear,
-#             self.conveyor_sign,
-#         )
-
-#         base_vel = self.motor_dps_to_joint_rad_s(
-#             base_vel_dps,
-#             self.base_gear,
-#             self.base_sign,
-#         )
-#         arm_vel = self.motor_dps_to_joint_rad_s(
-#             arm_vel_dps,
-#             self.arm_gear,
-#             self.arm_sign,
-#             self.arm_scale,
-#         )
-#         gripper_vel = self.map_gripper_velocity(gripper_vel_dps)
-#         conveyor_vel = self.motor_dps_to_joint_rad_s(
-#             conveyor_vel_dps,
-#             self.conveyor_gear,
-#             self.conveyor_sign,
-#         )
-
-#         state = JointState()
-#         state.header.stamp = self.get_clock().now().to_msg()
-#         state.name = list(self.joint_names)
-#         state.position = [
-#             base_pos,
-#             arm_pos,
-#             gripper_pos,
-#             conveyor_pos,
-#         ]
-#         state.velocity = [
-#             base_vel,
-#             arm_vel,
-#             gripper_vel,
-#             conveyor_vel,
-#         ]
-#         self.joint_state_pub.publish(state)
-
-#         conveyor_msg = Float64()
-#         conveyor_msg.data = conveyor_vel
-#         self.conveyor_velocity_pub.publish(conveyor_msg)
-
-#         raw = String()
-#         raw.data = line
-#         self.raw_state_pub.publish(raw)
-
-#     def destroy_node(self) -> None:
-#         self.shutdown_event.set()
-
-#         for sock_obj in (self.client, self.server):
-#             if sock_obj is not None:
-#                 try:
-#                     sock_obj.close()
-#                 except OSError:
-#                     pass
-
-#         super().destroy_node()
-
-
-# def main(args=None) -> None:
-#     rclpy.init(args=args)
-#     node = Ev3StateBridge()
-
-#     try:
-#         rclpy.spin(node)
-#     except KeyboardInterrupt:
-#         pass
-#     finally:
-#         node.destroy_node()
-#         if rclpy.ok():
-#             rclpy.shutdown()
-
-
-# if __name__ == "__main__":
-#     main()
-
-
-"""EV3 physical-state interface for the digital twin.
-
-Receives continuous EV3 encoder telemetry, converts it into canonical robot
-coordinates, enforces calibrated safety limits, and publishes the measured
-physical state separately from the simulated Gazebo state.
-
-The existing /digital_twin/* topics are kept during migration. New twin-aware
-topics are published under /twin/physical/*.
+#! usr/bin/env python3
+
+
+"""Gazebo-side interface for the EV3 digital twin.
+
+Design
+------
+* Manipulator joints follow a smooth 50 Hz calibrated "live telemetry" stream.
+* The simulated conveyor belt is NOT used to determine ball transport.
+* Ball transport is deterministic: measured EV3 conveyor progress [0, 1]
+  maps directly to a task-space path in Gazebo.
+* Red / blue balls are held exactly at pickup until GRIPPER_CLOSED. The
+  physical close event is authoritative; the ball is attached at the current
+  simulated contact pose and carried until GRIPPER_OPENED.
+* Green / black balls are moved to deterministic reject poses outside the
+  belt and then released to Gazebo physics.
+* A simulated ball-state topic exposes the last pose that Gazebo accepted,
+  allowing the coordinator to compare physical progress with applied sim
+  progress.
 """
 
-import math
-import queue
-import socket
-import threading
-from typing import Optional
+from __future__ import annotations
+
+import json
+import subprocess
+import time
+from typing import Dict, Optional
 
 import rclpy
 from rclpy.node import Node
+from rclpy.time import Time
+from ros_gz_interfaces.msg import Entity
+from ros_gz_interfaces.srv import SetEntityPose
 from sensor_msgs.msg import JointState
-from std_msgs.msg import Bool, Float64, String
+from std_msgs.msg import Bool, Float64, Float64MultiArray, String
+from tf2_ros import Buffer, TransformException, TransformListener
 
 
-class Ev3StateBridge(Node):
-    def __init__(self):
-        super().__init__("hardware_interface")
+BALL_RGB = {
+    "red": (1.0, 0.0, 0.0),
+    "blue": (0.0, 0.0, 1.0),
+    "black": (0.05, 0.05, 0.05),
+    "green": (0.0, 0.8, 0.0),
+}
 
-        self.declare_parameter("port", 5005)
-        self.declare_parameter("base_joint", "arm1_base_link_joint")
-        self.declare_parameter("arm_joint", "arm1_arm2_joint")
-        self.declare_parameter("gripper_joint", "left_gear_arm4_joint")
-        self.declare_parameter("conveyor_joint", "conveyor_left_pulley_joint")
+BALL_PHYSICS_CONFIG = {
+    "red": {
+        "friction": 0.25,
+        "kp": 100000.0,
+        "kd": 100.0,
+        "min_depth": 0.001,
+    },
+    "blue": {
+        "friction": 0.25,
+        "kp": 100000.0,
+        "kd": 100.0,
+        "min_depth": 0.001,
+    },
+    "black": {
+        "friction": 0.20,
+        "kp": 50000.0,
+        "kd": 10.0,
+        "min_depth": 0.001,
+    },
+    "green": {
+        "friction": 0.20,
+        "kp": 50000.0,
+        "kd": 10.0,
+        "min_depth": 0.001,
+    },
+}
 
-        self.declare_parameter("base_gear_ratio", 3.0)
-        self.declare_parameter("arm_gear_ratio", 5.0)
-        self.declare_parameter("arm_scale", 1.0)
-        self.declare_parameter("conveyor_gear_ratio", 1.0)
+BALL_SDF = """<sdf version='1.7'>
+  <model name='{name}'>
+    <link name='link'>
+      <inertial>
+        <mass>0.05</mass>
+        <inertia>
+          <ixx>3.92e-06</ixx>
+          <iyy>3.92e-06</iyy>
+          <izz>3.92e-06</izz>
+          <ixy>0.0</ixy>
+          <ixz>0.0</ixz>
+          <iyz>0.0</iyz>
+        </inertia>
+      </inertial>
+      <collision name='collision'>
+        <geometry>
+          <sphere><radius>{collision_radius}</radius></sphere>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>{friction}</mu>
+              <mu2>{friction}</mu2>
+            </ode>
+          </friction>
+          <bounce>
+            <restitution_coefficient>0.0</restitution_coefficient>
+            <threshold>100000.0</threshold>
+          </bounce>
+          <contact>
+            <ode>
+              <kp>{kp}</kp>
+              <kd>{kd}</kd>
+              <max_vel>0.01</max_vel>
+              <min_depth>{min_depth}</min_depth>
+            </ode>
+          </contact>
+        </surface>
+      </collision>
+      <visual name='visual'>
+        <geometry>
+          <sphere><radius>{visual_radius}</radius></sphere>
+        </geometry>
+        <material>
+          <ambient>{r} {g} {b} 1</ambient>
+          <diffuse>{r} {g} {b} 1</diffuse>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>"""
 
-        self.declare_parameter("base_sign", 1.0)
-        self.declare_parameter("arm_sign", 1.0)
-        self.declare_parameter("gripper_sign", 1.0)
-        self.declare_parameter("conveyor_sign", 1.0)
 
-        self.declare_parameter("base_zero_offset_rad", 0.0)
-        self.declare_parameter("arm_zero_offset_rad", -0.1)
+class GazeboTwinInterface(Node):
+    CONVEYOR_ACTIONS = {
+        "CONVEYOR_TO_PICKUP",
+        "CONVEYOR_BLACK",
+        "CONVEYOR_GREEN",
+    }
 
-        # Canonical safe operating envelope.
-        self.declare_parameter("base_sim_min_rad", -math.pi / 2.0)
-        self.declare_parameter("base_sim_max_rad", math.pi / 2.0)
+    PICK_COLORS = {"red", "blue"}
+    REJECT_COLORS = {"green", "black"}
 
-        # Calibrate these from the actual open and closed encoder readings.
-        self.declare_parameter("gripper_motor_open_deg", 0.0)
-        self.declare_parameter("gripper_motor_closed_deg", 90.0)
-        self.declare_parameter("gripper_sim_open", 0.0)
-        self.declare_parameter("gripper_sim_closed", 0.3)
+    def __init__(self) -> None:
+        super().__init__("gazebo_twin_interface")
 
-        # New digital-twin physical-state topics.
-        self.declare_parameter("physical_joint_state_topic", "/twin/physical/joint_states")
-        self.declare_parameter("physical_event_topic", "/twin/physical/events")
-        self.declare_parameter("physical_connected_topic", "/twin/physical/connected")
-        self.declare_parameter("physical_conveyor_velocity_topic", "/twin/physical/conveyor_velocity")
-        self.declare_parameter("physical_raw_state_topic", "/twin/physical/raw_state")
+        # ============================================================
+        # Manipulator mirroring
+        # ============================================================
+        self.declare_parameter(
+            "source_joints",
+            [
+                "arm1_base_link_joint",
+                "arm1_arm2_joint",
+                "left_gear_arm4_joint",
+            ],
+        )
+        self.declare_parameter(
+            "physical_live_joint_state_topic",
+            "/twin/physical/live_joint_states",
+        )
+        self.declare_parameter(
+            "physical_event_topic",
+            "/twin/physical/events",
+        )
+        self.declare_parameter(
+            "physical_connected_topic",
+            "/twin/physical/connected",
+        )
+        self.declare_parameter(
+            "physical_conveyor_progress_topic",
+            "/twin/physical/conveyor_progress",
+        )
+        self.declare_parameter(
+            "position_command_topic",
+            "/twin_position_controller/commands",
+        )
+        self.declare_parameter(
+            "gazebo_joint_state_topic",
+            "/joint_states",
+        )
+        self.declare_parameter(
+            "sim_joint_state_topic",
+            "/twin/sim/joint_states",
+        )
+        self.declare_parameter(
+            "sim_ball_state_topic",
+            "/twin/sim/ball_state",
+        )
+        self.declare_parameter("command_rate_hz", 50.0)
+        self.declare_parameter("state_timeout_sec", 0.5)
 
-        self.port = int(self.get_parameter("port").value)
+        # ============================================================
+        # Ball / task-space calibration
+        # ============================================================
+        self.declare_parameter("ball_radius", 0.014)
+        self.declare_parameter("spawn_x", -0.154099)
+        self.declare_parameter("spawn_y", 0.233)
+        self.declare_parameter("spawn_z", 0.0610)
+        self.declare_parameter("pickup_x", -0.020859)
 
-        self.joint_names = [
-            str(self.get_parameter("base_joint").value),
-            str(self.get_parameter("arm_joint").value),
-            str(self.get_parameter("gripper_joint").value),
-            str(self.get_parameter("conveyor_joint").value),
+        # The current URDF places the conveyor pulleys at approximately
+        # x=-0.174 m and x=+0.151 m in base coordinates. These defaults put
+        # reject targets roughly 3 cm beyond each edge. Keep them as launch
+        # parameters so final visual calibration is one-line configuration.
+        self.declare_parameter("green_reject_x", -0.205)
+        self.declare_parameter("black_reject_x", 0.181)
+
+        self.declare_parameter(
+            "set_pose_service",
+            "/world/empty/set_pose",
+        )
+        self.declare_parameter("ball_pose_rate_hz", 20.0)
+        self.declare_parameter("ball_pose_service_timeout_sec", 2.0)
+        self.declare_parameter("attach_world_frame", "world")
+        self.declare_parameter("attach_frame", "arm_4_1")
+
+        # ============================================================
+        # Read parameters
+        # ============================================================
+        self.source_joints = [
+            str(name)
+            for name in self.get_parameter("source_joints").value
         ]
+        if len(self.source_joints) != 3:
+            raise ValueError(
+                "source_joints must contain base, arm and gripper"
+            )
 
-        self.base_gear = float(self.get_parameter("base_gear_ratio").value)
-        self.arm_gear = float(self.get_parameter("arm_gear_ratio").value)
-        self.arm_scale = float(self.get_parameter("arm_scale").value)
-        self.conveyor_gear = float(
-            self.get_parameter("conveyor_gear_ratio").value
-        )
-
-        self.base_sign = float(self.get_parameter("base_sign").value)
-        self.arm_sign = float(self.get_parameter("arm_sign").value)
-        self.gripper_sign = float(self.get_parameter("gripper_sign").value)
-        self.conveyor_sign = float(
-            self.get_parameter("conveyor_sign").value
+        self.timeout_sec = float(
+            self.get_parameter("state_timeout_sec").value
         )
 
-        self.base_zero = float(
-            self.get_parameter("base_zero_offset_rad").value
+        self.ball_radius = float(self.get_parameter("ball_radius").value)
+        self.spawn_x = float(self.get_parameter("spawn_x").value)
+        self.spawn_y = float(self.get_parameter("spawn_y").value)
+        self.spawn_z = float(self.get_parameter("spawn_z").value)
+        self.pickup_x = float(self.get_parameter("pickup_x").value)
+        self.green_reject_x = float(
+            self.get_parameter("green_reject_x").value
         )
-        self.arm_zero = float(
-            self.get_parameter("arm_zero_offset_rad").value
+        self.black_reject_x = float(
+            self.get_parameter("black_reject_x").value
         )
-        self.base_min = float(
-            self.get_parameter("base_sim_min_rad").value
+        self.set_pose_service = str(
+            self.get_parameter("set_pose_service").value
         )
-        self.base_max = float(
-            self.get_parameter("base_sim_max_rad").value
+        self.ball_pose_period = 1.0 / max(
+            1.0,
+            float(self.get_parameter("ball_pose_rate_hz").value),
         )
-        if self.base_min >= self.base_max:
-            raise ValueError("base_sim_min_rad must be smaller than base_sim_max_rad")
+        self.ball_pose_service_timeout = max(
+            0.1,
+            float(
+                self.get_parameter(
+                    "ball_pose_service_timeout_sec"
+                ).value
+            ),
+        )
+        self.attach_world_frame = str(
+            self.get_parameter("attach_world_frame").value
+        )
+        self.attach_frame = str(
+            self.get_parameter("attach_frame").value
+        )
+        self.transport_targets = {
+            "CONVEYOR_TO_PICKUP": (
+                self.pickup_x,
+                self.spawn_y,
+                self.spawn_z,
+            ),
+            "CONVEYOR_GREEN": (
+                self.green_reject_x,
+                self.spawn_y,
+                self.spawn_z,
+            ),
+            "CONVEYOR_BLACK": (
+                self.black_reject_x,
+                self.spawn_y,
+                self.spawn_z,
+            ),
+        }
 
-        self.gripper_motor_open = float(
-            self.get_parameter("gripper_motor_open_deg").value
+        # ============================================================
+        # ROS I/O
+        # ============================================================
+        self.position_pub = self.create_publisher(
+            Float64MultiArray,
+            str(self.get_parameter("position_command_topic").value),
+            20,
         )
-        self.gripper_motor_closed = float(
-            self.get_parameter("gripper_motor_closed_deg").value
-        )
-        self.gripper_sim_open = float(
-            self.get_parameter("gripper_sim_open").value
-        )
-        self.gripper_sim_closed = float(
-            self.get_parameter("gripper_sim_closed").value
-        )
-
-        self.joint_state_pub = self.create_publisher(
+        self.sim_joint_state_pub = self.create_publisher(
             JointState,
-            "/digital_twin/joint_states",
+            str(self.get_parameter("sim_joint_state_topic").value),
             20,
         )
-        self.event_pub = self.create_publisher(
+        self.sim_ball_state_pub = self.create_publisher(
             String,
-            "/digital_twin/events",
-            20,
-        )
-        self.connected_pub = self.create_publisher(
-            Bool,
-            "/digital_twin/connected",
-            1,
-        )
-        self.conveyor_velocity_pub = self.create_publisher(
-            Float64,
-            "/digital_twin/conveyor_velocity",
-            20,
-        )
-        self.raw_state_pub = self.create_publisher(
-            String,
-            "/digital_twin/raw_state",
+            str(self.get_parameter("sim_ball_state_topic").value),
             20,
         )
 
-        # Canonical measured physical state for the digital twin.
-        self.physical_joint_state_pub = self.create_publisher(
+        self.create_subscription(
             JointState,
-            str(self.get_parameter("physical_joint_state_topic").value),
+            str(
+                self.get_parameter(
+                    "physical_live_joint_state_topic"
+                ).value
+            ),
+            self.live_state_callback,
             20,
         )
-        self.physical_event_pub = self.create_publisher(
+        self.create_subscription(
             String,
             str(self.get_parameter("physical_event_topic").value),
+            self.event_callback,
             20,
         )
-        self.physical_connected_pub = self.create_publisher(
+        self.create_subscription(
             Bool,
             str(self.get_parameter("physical_connected_topic").value),
-            1,
+            self.connection_callback,
+            10,
         )
-        self.physical_conveyor_velocity_pub = self.create_publisher(
+        self.create_subscription(
             Float64,
-            str(self.get_parameter("physical_conveyor_velocity_topic").value),
+            str(
+                self.get_parameter(
+                    "physical_conveyor_progress_topic"
+                ).value
+            ),
+            self.conveyor_progress_callback,
             20,
         )
-        self.physical_raw_state_pub = self.create_publisher(
-            String,
-            str(self.get_parameter("physical_raw_state_topic").value),
+        self.create_subscription(
+            JointState,
+            str(self.get_parameter("gazebo_joint_state_topic").value),
+            self.sim_state_callback,
             20,
         )
 
-        self.line_queue: queue.Queue[tuple[str, Optional[str]]] = queue.Queue()
-        self.shutdown_event = threading.Event()
-        self.server: Optional[socket.socket] = None
-        self.client: Optional[socket.socket] = None
-
-        self.listener_thread = threading.Thread(
-            target=self.listen_loop,
-            daemon=True,
+        self.set_pose_client = self.create_client(
+            SetEntityPose,
+            self.set_pose_service,
         )
-        self.listener_thread.start()
 
-        self.create_timer(0.01, self.drain_queue)
-        self.publish_connection(False)
+        # TF is used only for logical grasp attachment.  The ball offset is
+        # captured at GRIPPER_CLOSED and then transformed with arm_4_1.
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(
+            self.tf_buffer,
+            self,
+        )
+
+        # ============================================================
+        # Runtime state: manipulator
+        # ============================================================
+        self.latest_position: Optional[list[float]] = None
+        self.last_live_state_wall_time: Optional[float] = None
+        self.latest_sim_gripper_position: Optional[float] = None
+
+        # ============================================================
+        # Runtime state: session / ball
+        # ============================================================
+        self.physical_connected = False
+        self.session_id = 0
+        self.spawned_cycles: set[int] = set()
+
+        self.current_ball_name: Optional[str] = None
+        self.current_ball_color: Optional[str] = None
+        self.current_cycle_id: Optional[int] = None
+
+        self.ball_mode = "IDLE"
+        self.active_conveyor_action: Optional[str] = None
+
+        self.physical_progress = 0.0
+        self.desired_ball_progress = 0.0
+        self.applied_ball_progress = 0.0
+
+        self.ball_pose_control = False
+        self.release_after_pose = False
+        self.ball_pose_future = None
+        self.ball_pose_future_started: Optional[float] = None
+        self.ball_pose_request_progress: Optional[float] = None
+        self.ball_pose_request_xyz: Optional[tuple[float, float, float]] = None
+        self.last_ball_pose_request_wall_time = 0.0
+        self.last_applied_xyz = (
+            self.spawn_x,
+            self.spawn_y,
+            self.spawn_z,
+        )
+
+        self.ball_attached = False
+        self.ball_attach_pending = False
+        self.ball_attach_offset_local: Optional[
+            tuple[float, float, float]
+        ] = None
+        self.last_attach_warning_wall_time = 0.0
+
+        command_rate_hz = max(
+            1.0,
+            float(self.get_parameter("command_rate_hz").value),
+        )
+        self.create_timer(
+            1.0 / command_rate_hz,
+            self.publish_commands,
+        )
 
         self.get_logger().info(
-            "Arm mapping: q_sim = {:.6f} + ({:.6f}) * "
-            "radians(motor_deg / {:.6f})".format(
-                self.arm_zero,
-                self.arm_sign * self.arm_scale,
-                self.arm_gear,
-            )
+            "Gazebo twin ready: live manipulator telemetry + deterministic "
+            "task-space ball transport. Conveyor power no longer determines "
+            "ball position."
         )
         self.get_logger().info(
-            "Safe base range: [{:.6f}, {:.6f}] rad; gripper: [{:.3f}, {:.3f}] rad".format(
-                self.base_min,
-                self.base_max,
-                self.gripper_sim_open,
-                self.gripper_sim_closed,
+            "Ball targets: pickup_x={:.6f}, green_reject_x={:.6f}, "
+            "black_reject_x={:.6f}".format(
+                self.pickup_x,
+                self.green_reject_x,
+                self.black_reject_x,
             )
         )
 
-    @staticmethod
-    def motor_deg_to_joint_rad(
-        motor_deg: float,
-        gear_ratio: float,
-        sign: float,
-        zero_offset_rad: float = 0.0,
-        scale: float = 1.0,
-    ) -> float:
-        if gear_ratio == 0.0:
-            raise ValueError("gear_ratio must not be zero")
+    # ================================================================
+    # Manipulator state
+    # ================================================================
 
-        return (
-            zero_offset_rad
-            + sign * scale * math.radians(motor_deg / gear_ratio)
+    def live_state_callback(self, msg: JointState) -> None:
+        position_by_name: Dict[str, float] = dict(
+            zip(msg.name, msg.position)
         )
+        missing = [
+            name
+            for name in self.source_joints
+            if name not in position_by_name
+        ]
+        if missing:
+            return
 
-    @staticmethod
-    def motor_dps_to_joint_rad_s(
-        motor_dps: float,
-        gear_ratio: float,
-        sign: float,
-        scale: float = 1.0,
-    ) -> float:
-        if gear_ratio == 0.0:
-            raise ValueError("gear_ratio must not be zero")
+        self.latest_position = [
+            position_by_name[name]
+            for name in self.source_joints
+        ]
+        self.last_live_state_wall_time = time.monotonic()
 
-        return sign * scale * math.radians(motor_dps / gear_ratio)
+    def sim_state_callback(self, msg: JointState) -> None:
+        # This is independent measured Gazebo feedback, not the command.
+        self.sim_joint_state_pub.publish(msg)
 
-    def map_gripper_position(self, motor_deg: float) -> float:
-        denominator = self.gripper_motor_closed - self.gripper_motor_open
-
-        if abs(denominator) < 1e-9:
-            raise ValueError(
-                "gripper_motor_open_deg and gripper_motor_closed_deg "
-                "must be different"
+        positions = dict(zip(msg.name, msg.position))
+        gripper_name = self.source_joints[2]
+        if gripper_name in positions:
+            self.latest_sim_gripper_position = float(
+                positions[gripper_name]
             )
 
-        fraction = (motor_deg - self.gripper_motor_open) / denominator
-        fraction = max(0.0, min(1.0, fraction))
+    def publish_commands(self) -> None:
+        now = time.monotonic()
 
-        value = self.gripper_sim_open + fraction * (
-            self.gripper_sim_closed - self.gripper_sim_open
-        )
-        return self.gripper_sign * value
+        if (
+            self.latest_position is not None
+            and self.last_live_state_wall_time is not None
+            and now - self.last_live_state_wall_time <= self.timeout_sec
+        ):
+            command = Float64MultiArray()
+            command.data = list(self.latest_position)
+            self.position_pub.publish(command)
 
-    def map_gripper_velocity(self, motor_dps: float) -> float:
-        denominator = self.gripper_motor_closed - self.gripper_motor_open
+        self.update_ball_pose_control(now)
+        self.update_attached_ball_pose(now)
 
-        if abs(denominator) < 1e-9:
-            return 0.0
+    # ================================================================
+    # Session
+    # ================================================================
 
-        slope = (
-            self.gripper_sim_closed - self.gripper_sim_open
-        ) / denominator
-        return self.gripper_sign * motor_dps * slope
+    def connection_callback(self, msg: Bool) -> None:
+        connected = bool(msg.data)
 
-    def publish_connection(self, connected: bool) -> None:
-        msg = Bool()
-        msg.data = connected
-        self.connected_pub.publish(msg)
-        self.physical_connected_pub.publish(msg)
-
-    def listen_loop(self) -> None:
-        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.server.bind(("0.0.0.0", self.port))
-        self.server.listen(1)
-        self.server.settimeout(1.0)
-
-        while rclpy.ok() and not self.shutdown_event.is_set():
+        if connected and not self.physical_connected:
+            self.session_id += 1
+            self.spawned_cycles.clear()
+            self.reset_active_ball_state()
             self.get_logger().info(
-                "Awaiting EV3 state stream on TCP port {}...".format(
-                    self.port
-                )
+                "Started EV3 twin session {}.".format(self.session_id)
             )
 
-            try:
-                client, address = self.server.accept()
-            except socket.timeout:
-                continue
-            except OSError:
-                break
+        if not connected and self.physical_connected:
+            # Freeze deterministic transport at the last physical progress.
+            self.active_conveyor_action = None
+            if self.current_ball_name is not None:
+                self.ball_mode = "PHYSICAL_DISCONNECTED"
+                self.publish_ball_state()
 
-            self.client = client
+        self.physical_connected = connected
 
-            try:
-                client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-                client.settimeout(5.0)
-                reader = client.makefile("r", encoding="utf-8", newline="\n")
+    def reset_active_ball_state(self) -> None:
+        self.current_ball_name = None
+        self.current_ball_color = None
+        self.current_cycle_id = None
+        self.ball_mode = "IDLE"
+        self.active_conveyor_action = None
+        self.physical_progress = 0.0
+        self.desired_ball_progress = 0.0
+        self.applied_ball_progress = 0.0
+        self.ball_pose_control = False
+        self.release_after_pose = False
+        self.ball_pose_future = None
+        self.ball_pose_future_started = None
+        self.ball_pose_request_progress = None
+        self.ball_pose_request_xyz = None
+        self.last_applied_xyz = (
+            self.spawn_x,
+            self.spawn_y,
+            self.spawn_z,
+        )
+        self.ball_attached = False
+        self.ball_attach_pending = False
+        self.ball_attach_offset_local = None
 
-                handshake = reader.readline().strip()
+    # ================================================================
+    # Logical grasp attachment
+    # ================================================================
 
-                if handshake != "EV3_CONNECT_REQUEST":
-                    raise RuntimeError(
-                        "Invalid handshake token: {!r}".format(handshake)
+    @staticmethod
+    def rotate_vector_by_quaternion(
+        vector: tuple[float, float, float],
+        quaternion: tuple[float, float, float, float],
+    ) -> tuple[float, float, float]:
+        """Rotate a 3-D vector by an xyzw quaternion."""
+        vx, vy, vz = vector
+        qx, qy, qz, qw = quaternion
+
+        # t = 2 * cross(q.xyz, v)
+        tx = 2.0 * (qy * vz - qz * vy)
+        ty = 2.0 * (qz * vx - qx * vz)
+        tz = 2.0 * (qx * vy - qy * vx)
+
+        # v' = v + qw * t + cross(q.xyz, t)
+        return (
+            vx + qw * tx + (qy * tz - qz * ty),
+            vy + qw * ty + (qz * tx - qx * tz),
+            vz + qw * tz + (qx * ty - qy * tx),
+        )
+
+    def lookup_attach_transform(self):
+        try:
+            return self.tf_buffer.lookup_transform(
+                self.attach_world_frame,
+                self.attach_frame,
+                Time(),
+            )
+        except TransformException:
+            return None
+
+    def start_ball_attachment(self) -> bool:
+        if self.current_ball_name is None:
+            return False
+
+        transform = self.lookup_attach_transform()
+        if transform is None:
+            return False
+
+        translation = transform.transform.translation
+        rotation = transform.transform.rotation
+
+        arm_xyz = (
+            float(translation.x),
+            float(translation.y),
+            float(translation.z),
+        )
+        q = (
+            float(rotation.x),
+            float(rotation.y),
+            float(rotation.z),
+            float(rotation.w),
+        )
+
+        delta_world = (
+            self.last_applied_xyz[0] - arm_xyz[0],
+            self.last_applied_xyz[1] - arm_xyz[1],
+            self.last_applied_xyz[2] - arm_xyz[2],
+        )
+
+        # world -> arm rotation is the inverse (conjugate) quaternion.
+        q_inverse = (-q[0], -q[1], -q[2], q[3])
+        self.ball_attach_offset_local = (
+            self.rotate_vector_by_quaternion(
+                delta_world,
+                q_inverse,
+            )
+        )
+
+        self.ball_attached = True
+        self.ball_attach_pending = False
+
+        self.get_logger().info(
+            "Logically attached {} to {} with local offset "
+            "({:.4f}, {:.4f}, {:.4f}).".format(
+                self.current_ball_name,
+                self.attach_frame,
+                self.ball_attach_offset_local[0],
+                self.ball_attach_offset_local[1],
+                self.ball_attach_offset_local[2],
+            )
+        )
+        return True
+
+    def update_attached_ball_pose(self, now: float) -> None:
+        if self.ball_attach_pending and not self.ball_attached:
+            if not self.start_ball_attachment():
+                if now - self.last_attach_warning_wall_time >= 1.0:
+                    self.get_logger().warning(
+                        "Physical grasp received; waiting for TF {} -> {} "
+                        "before attaching ball.".format(
+                            self.attach_world_frame,
+                            self.attach_frame,
+                        )
                     )
-
-                client.sendall(b"ROS_CONNECT_ACCEPT\n")
-                client.settimeout(None)
-                self.line_queue.put(("CONNECTED", str(address)))
-
-                for raw_line in reader:
-                    line = raw_line.strip()
-                    if line:
-                        self.line_queue.put(("LINE", line))
-
-            except (OSError, RuntimeError) as exc:
-                self.line_queue.put(("ERROR", str(exc)))
-
-            finally:
-                try:
-                    client.close()
-                except OSError:
-                    pass
-
-                self.client = None
-                self.line_queue.put(("DISCONNECTED", None))
-
-    def drain_queue(self) -> None:
-        while True:
-            try:
-                kind, payload = self.line_queue.get_nowait()
-            except queue.Empty:
+                    self.last_attach_warning_wall_time = now
                 return
 
-            if kind == "CONNECTED":
-                self.publish_connection(True)
-                self.get_logger().info("EV3 connected from {}".format(payload))
-            elif kind == "DISCONNECTED":
-                self.publish_connection(False)
-                self.get_logger().warning("EV3 disconnected")
-            elif kind == "ERROR":
-                self.get_logger().error("EV3 TCP error: {}".format(payload))
-            elif kind == "LINE" and payload is not None:
-                self.process_line(payload)
+            self.ball_pose_control = False
+            self.ball_mode = "GRASPED"
+            self.publish_ball_state()
 
-    def process_line(self, line: str) -> None:
-        if line.startswith("STATE|"):
-            self.process_state(line)
+        if not self.ball_attached:
+            return
+        if self.current_ball_name is None:
+            return
+        if self.ball_attach_offset_local is None:
             return
 
-        if line.startswith("EVENT|"):
-            msg = String()
-            msg.data = line
-            self.event_pub.publish(msg)
-            self.physical_event_pub.publish(msg)
-            self.get_logger().info("EV3 event: {}".format(line))
+        if self.ball_pose_future is not None:
+            if self.ball_pose_future.done():
+                self.ball_pose_future = None
+                self.ball_pose_future_started = None
+            else:
+                return
+
+        if now - self.last_ball_pose_request_wall_time < self.ball_pose_period:
             return
 
-        self.get_logger().warning("Unknown EV3 packet: {}".format(line))
+        transform = self.lookup_attach_transform()
+        if transform is None:
+            if now - self.last_attach_warning_wall_time >= 1.0:
+                self.get_logger().warning(
+                    "Lost TF {} -> {} while ball is attached.".format(
+                        self.attach_world_frame,
+                        self.attach_frame,
+                    )
+                )
+                self.last_attach_warning_wall_time = now
+            return
 
-    def process_state(self, line: str) -> None:
-        parts = line.split("|")
+        translation = transform.transform.translation
+        rotation = transform.transform.rotation
+        q = (
+            float(rotation.x),
+            float(rotation.y),
+            float(rotation.z),
+            float(rotation.w),
+        )
 
-        if len(parts) != 15:
+        offset_world = self.rotate_vector_by_quaternion(
+            self.ball_attach_offset_local,
+            q,
+        )
+        xyz = (
+            float(translation.x) + offset_world[0],
+            float(translation.y) + offset_world[1],
+            float(translation.z) + offset_world[2],
+        )
+
+        # Keep applied progress at 1.0 while carrying the successfully
+        # transported ball.
+        self.request_ball_pose(1.0, xyz)
+
+    # ================================================================
+    # Physical conveyor progress -> deterministic ball path
+    # ================================================================
+
+    def conveyor_progress_callback(self, msg: Float64) -> None:
+        if self.active_conveyor_action not in self.CONVEYOR_ACTIONS:
+            return
+        if self.current_ball_name is None:
+            return
+
+        progress = float(msg.data)
+        if progress < 0.0:
+            return
+
+        progress = max(0.0, min(1.0, progress))
+        self.physical_progress = progress
+        self.desired_ball_progress = progress
+
+    def target_for_action(
+        self,
+        action: str,
+    ) -> tuple[float, float, float]:
+        return self.transport_targets[action]
+
+    def interpolated_ball_pose(
+        self,
+        action: str,
+        progress: float,
+    ) -> tuple[float, float, float]:
+        target_x, target_y, target_z = self.target_for_action(action)
+
+        x = self.spawn_x + progress * (target_x - self.spawn_x)
+        y = self.spawn_y + progress * (target_y - self.spawn_y)
+        z = self.spawn_z + progress * (target_z - self.spawn_z)
+        return x, y, z
+
+    def update_ball_pose_control(self, now: float) -> None:
+        if not self.ball_pose_control:
+            return
+        if self.current_ball_name is None:
+            return
+        if self.active_conveyor_action not in self.CONVEYOR_ACTIONS:
+            # FAULT mode can intentionally hold the last applied pose.
+            if self.ball_mode != "FAULT":
+                return
+            action = self.last_transport_action_for_current_ball()
+            if action is None:
+                return
+        else:
+            action = self.active_conveyor_action
+
+        # Only one service request in flight. If it gets stuck, allow a retry
+        # after the configured timeout rather than blocking the twin forever.
+        if self.ball_pose_future is not None:
+            if self.ball_pose_future.done():
+                self.ball_pose_future = None
+                self.ball_pose_future_started = None
+            elif (
+                self.ball_pose_future_started is not None
+                and now - self.ball_pose_future_started
+                > self.ball_pose_service_timeout
+            ):
+                self.get_logger().warning(
+                    "SetEntityPose request timed out; retrying latest ball pose."
+                )
+                self.ball_pose_future = None
+                self.ball_pose_future_started = None
+            else:
+                return
+
+        # While the ball is at pickup we intentionally reassert the pose at
+        # ball_pose_rate_hz so contact / belt physics cannot drift it before
+        # GRIPPER_CLOSED. During transport the same rate is sufficient because
+        # physical progress itself is ~20 Hz.
+        if now - self.last_ball_pose_request_wall_time < self.ball_pose_period:
+            return
+
+        progress = max(0.0, min(1.0, self.desired_ball_progress))
+        xyz = self.interpolated_ball_pose(action, progress)
+        self.request_ball_pose(progress, xyz)
+
+    def request_ball_pose(
+        self,
+        progress: float,
+        xyz: tuple[float, float, float],
+    ) -> None:
+        if not rclpy.ok():
+            return
+        if not self.set_pose_client.service_is_ready():
             self.get_logger().warning(
-                "Malformed STATE packet: expected 15 fields, got {}: {}".format(
-                    len(parts),
-                    line,
+                "SetEntityPose service '{}' is not ready.".format(
+                    self.set_pose_service
                 )
             )
+            return
+        if self.current_ball_name is None:
+            return
+
+        request = SetEntityPose.Request()
+        request.entity.name = self.current_ball_name
+        request.entity.type = Entity.MODEL
+        request.pose.position.x = float(xyz[0])
+        request.pose.position.y = float(xyz[1])
+        request.pose.position.z = float(xyz[2])
+        request.pose.orientation.x = 0.0
+        request.pose.orientation.y = 0.0
+        request.pose.orientation.z = 0.0
+        request.pose.orientation.w = 1.0
+
+        self.ball_pose_request_progress = progress
+        self.ball_pose_request_xyz = xyz
+        self.last_ball_pose_request_wall_time = time.monotonic()
+        self.ball_pose_future_started = self.last_ball_pose_request_wall_time
+        self.ball_pose_future = self.set_pose_client.call_async(request)
+        self.ball_pose_future.add_done_callback(
+            self.ball_pose_done_callback
+        )
+
+    def ball_pose_done_callback(self, future) -> None:
+        progress = self.ball_pose_request_progress
+        xyz = self.ball_pose_request_xyz
+
+        try:
+            response = future.result()
+        except Exception as exc:
+            self.get_logger().error(
+                "SetEntityPose failed: {}".format(exc)
+            )
+            return
+
+        if response is None or not response.success:
+            self.get_logger().error(
+                "Gazebo rejected SetEntityPose for {}".format(
+                    self.current_ball_name
+                )
+            )
+            return
+
+        if progress is not None:
+            self.applied_ball_progress = float(progress)
+        if xyz is not None:
+            self.last_applied_xyz = xyz
+
+        self.publish_ball_state()
+
+        # Reject balls are released only after Gazebo confirmed the exact
+        # endpoint pose. They are then outside the belt and gravity takes over.
+        if (
+            self.release_after_pose
+            and self.applied_ball_progress >= 0.999
+        ):
+            self.ball_pose_control = False
+            self.release_after_pose = False
+            self.publish_ball_state()
+
+    def last_transport_action_for_current_ball(self) -> Optional[str]:
+        if self.current_ball_color in self.PICK_COLORS:
+            return "CONVEYOR_TO_PICKUP"
+        if self.current_ball_color == "green":
+            return "CONVEYOR_GREEN"
+        if self.current_ball_color == "black":
+            return "CONVEYOR_BLACK"
+        return None
+
+    # ================================================================
+    # Semantic events
+    # ================================================================
+
+    def event_callback(self, msg: String) -> None:
+        parts = msg.data.split("|")
+        if len(parts) != 4 or parts[0] != "EVENT":
             return
 
         try:
-            _sequence = int(parts[1])
-            _ev3_ms = int(parts[2])
+            cycle_id = int(parts[1])
+        except ValueError:
+            return
 
-            base_pos_deg = float(parts[3])
-            base_vel_dps = float(parts[4])
-            arm_pos_deg = float(parts[5])
-            arm_vel_dps = float(parts[6])
-            gripper_pos_deg = float(parts[7])
-            gripper_vel_dps = float(parts[8])
-            conveyor_pos_deg = float(parts[9])
-            conveyor_vel_dps = float(parts[10])
+        event_name = parts[2].strip().upper()
+        value = parts[3].strip()
 
-            _arm_home = bool(int(parts[11]))
-            _base_home = bool(int(parts[12]))
-            _color = parts[13]
-            _action = parts[14]
-        except ValueError as exc:
-            self.get_logger().warning(
-                "Could not parse STATE packet: {} ({})".format(line, exc)
+        if event_name == "BALL_DETECTED":
+            color = value.lower()
+            if cycle_id in self.spawned_cycles:
+                return
+
+            name = self.spawn_ball(color, cycle_id)
+            if name is not None:
+                self.spawned_cycles.add(cycle_id)
+                self.current_ball_name = name
+                self.current_ball_color = color
+                self.current_cycle_id = cycle_id
+                self.ball_mode = "SPAWNED"
+                self.active_conveyor_action = None
+                self.physical_progress = 0.0
+                self.desired_ball_progress = 0.0
+                self.applied_ball_progress = 0.0
+                self.ball_pose_control = False
+                self.release_after_pose = False
+                self.ball_attached = False
+                self.ball_attach_pending = False
+                self.ball_attach_offset_local = None
+                self.last_applied_xyz = (
+                    self.spawn_x,
+                    self.spawn_y,
+                    self.spawn_z,
+                )
+                self.publish_ball_state()
+            return
+
+        if event_name == "ACTION_START":
+            action = value.split(":", 1)[0].strip().upper()
+
+            if action in self.CONVEYOR_ACTIONS:
+                if self.current_ball_name is None:
+                    self.get_logger().warning(
+                        "{} started but no simulated ball exists.".format(
+                            action
+                        )
+                    )
+                    return
+
+                self.active_conveyor_action = action
+                self.physical_progress = 0.0
+                self.desired_ball_progress = 0.0
+                self.applied_ball_progress = 0.0
+                self.ball_pose_control = True
+                self.release_after_pose = False
+                self.ball_mode = "TRANSPORTING"
+                self.publish_ball_state()
+                self.get_logger().info(
+                    "Deterministic transport armed: {} -> {}".format(
+                        action,
+                        self.target_for_action(action),
+                    )
+                )
+            return
+
+        if event_name == "ACTION_DONE":
+            fields = value.split(":", 1)
+            action = fields[0].strip().upper()
+
+            if len(fields) == 2:
+                try:
+                    duration_ms = int(fields[1])
+                    self.get_logger().info(
+                        "{} EV3 duration: {} ms".format(
+                            action,
+                            duration_ms,
+                        )
+                    )
+                except ValueError:
+                    pass
+
+            if action in self.CONVEYOR_ACTIONS:
+                # Successful physical completion means the exact task-space
+                # endpoint is authoritative, irrespective of tiny encoder
+                # quantization at the final STATE packet.
+                self.physical_progress = 1.0
+                self.desired_ball_progress = 1.0
+
+                if action == "CONVEYOR_TO_PICKUP":
+                    self.ball_mode = "AT_PICKUP"
+                    # Keep reasserting pickup pose until the physical gripper
+                    # has actually closed. This removes pickup stochasticity.
+                    self.ball_pose_control = True
+                    self.release_after_pose = False
+                else:
+                    self.ball_mode = "REJECTED"
+                    # Release only once Gazebo confirms the exact reject pose.
+                    self.ball_pose_control = True
+                    self.release_after_pose = True
+
+                self.publish_ball_state()
+            return
+
+        if event_name == "GRIPPER_CLOSED":
+            if (
+                self.current_ball_color in self.PICK_COLORS
+                and self.current_ball_name is not None
+            ):
+                # The physical EV3 stall/contact is the grasp source of truth.
+                # +0.35 rad is the EMPTY-gripper closed pose; a ball between
+                # the fingers can stop Gazebo at a much earlier contact angle.
+                self.ball_mode = "GRASP_PENDING"
+                self.ball_pose_control = True
+                self.release_after_pose = False
+                self.ball_attach_pending = True
+                self.ball_attached = False
+                self.ball_attach_offset_local = None
+
+                measured = self.latest_sim_gripper_position
+                self.get_logger().info(
+                    "Physical GRIPPER_CLOSED received; Gazebo contact "
+                    "position={}. Attaching at contact pose.".format(
+                        "unknown"
+                        if measured is None
+                        else "{:.3f} rad".format(measured)
+                    )
+                )
+
+                if self.start_ball_attachment():
+                    self.ball_pose_control = False
+                    self.ball_mode = "GRASPED"
+
+                self.publish_ball_state()
+            return
+
+        if event_name == "GRIPPER_OPENED":
+            if self.current_ball_name is not None:
+                # Stop kinematic attachment first; from this instant Gazebo
+                # gravity / contact physics owns the released ball.
+                self.ball_attach_pending = False
+                self.ball_attached = False
+                self.ball_attach_offset_local = None
+                self.ball_mode = "RELEASED"
+                self.publish_ball_state()
+            return
+
+        if event_name in ("ACTION_FAILED", "FAULT"):
+            # Never snap a failed physical conveyor action to success. Freeze
+            # at the last physical progress instead.
+            if self.current_ball_name is not None:
+                self.ball_mode = "FAULT"
+                self.ball_pose_control = True
+                self.release_after_pose = False
+                self.publish_ball_state()
+
+            self.active_conveyor_action = None
+            self.ball_attach_pending = False
+            self.ball_attached = False
+            self.ball_attach_offset_local = None
+            self.get_logger().error(
+                "Physical EV3 fault received: {}".format(value)
             )
             return
 
-        raw_base_pos = self.motor_deg_to_joint_rad(
-            base_pos_deg,
-            self.base_gear,
-            self.base_sign,
-            self.base_zero,
+        if event_name == "CYCLE_COMPLETE":
+            if self.current_ball_name is not None:
+                self.ball_mode = "COMPLETE"
+                self.publish_ball_state()
+            self.active_conveyor_action = None
+            self.ball_pose_control = False
+            self.release_after_pose = False
+            self.ball_attach_pending = False
+            self.ball_attached = False
+            self.ball_attach_offset_local = None
+            return
+
+        if event_name == "TASK_COMPLETE":
+            self.active_conveyor_action = None
+            self.ball_pose_control = False
+            self.release_after_pose = False
+            self.ball_attach_pending = False
+            self.ball_attached = False
+            self.ball_attach_offset_local = None
+            return
+
+    # ================================================================
+    # Ball state observability
+    # ================================================================
+
+    def publish_ball_state(self) -> None:
+        if self.current_ball_name is None:
+            return
+
+        action = self.active_conveyor_action
+        if action is None:
+            action = self.last_transport_action_for_current_ball()
+
+        payload = {
+            "session_id": self.session_id,
+            "cycle_id": self.current_cycle_id,
+            "name": self.current_ball_name,
+            "color": self.current_ball_color,
+            "mode": self.ball_mode,
+            "action": action,
+            "physical_progress": self.physical_progress,
+            "desired_progress": self.desired_ball_progress,
+            "applied_progress": self.applied_ball_progress,
+            "pose_control_active": self.ball_pose_control,
+            "attached": self.ball_attached,
+            "attach_pending": self.ball_attach_pending,
+            "attach_frame": self.attach_frame,
+            "sim_gripper_position": self.latest_sim_gripper_position,
+            "x": self.last_applied_xyz[0],
+            "y": self.last_applied_xyz[1],
+            "z": self.last_applied_xyz[2],
+        }
+
+        msg = String()
+        msg.data = json.dumps(
+            payload,
+            separators=(",", ":"),
+            sort_keys=True,
         )
-        base_pos = max(self.base_min, min(self.base_max, raw_base_pos))
-        arm_pos = self.motor_deg_to_joint_rad(
-            arm_pos_deg,
-            self.arm_gear,
-            self.arm_sign,
-            self.arm_zero,
-            self.arm_scale,
-        )
-        gripper_pos = self.map_gripper_position(gripper_pos_deg)
-        conveyor_pos = self.motor_deg_to_joint_rad(
-            conveyor_pos_deg,
-            self.conveyor_gear,
-            self.conveyor_sign,
+        self.sim_ball_state_pub.publish(msg)
+
+    # ================================================================
+    # Ball spawning
+    # ================================================================
+
+    def spawn_ball(self, color: str, cycle_id: int) -> Optional[str]:
+        if color not in BALL_RGB:
+            self.get_logger().warning(
+                "Unknown ball color: {}".format(color)
+            )
+            return None
+
+        r, g, b = BALL_RGB[color]
+        cfg = BALL_PHYSICS_CONFIG[color]
+
+        name = "s{}_{}_ball_{}".format(
+            self.session_id,
+            color,
+            cycle_id,
         )
 
-        base_vel = self.motor_dps_to_joint_rad_s(
-            base_vel_dps,
-            self.base_gear,
-            self.base_sign,
-        )
-        arm_vel = self.motor_dps_to_joint_rad_s(
-            arm_vel_dps,
-            self.arm_gear,
-            self.arm_sign,
-            self.arm_scale,
-        )
-        gripper_vel = self.map_gripper_velocity(gripper_vel_dps)
-        conveyor_vel = self.motor_dps_to_joint_rad_s(
-            conveyor_vel_dps,
-            self.conveyor_gear,
-            self.conveyor_sign,
+        sdf = BALL_SDF.format(
+            name=name,
+            visual_radius=self.ball_radius,
+            collision_radius=self.ball_radius,
+            friction=cfg["friction"],
+            kp=cfg["kp"],
+            kd=cfg["kd"],
+            min_depth=cfg["min_depth"],
+            r=r,
+            g=g,
+            b=b,
         )
 
-        state = JointState()
-        state.header.stamp = self.get_clock().now().to_msg()
-        state.name = list(self.joint_names)
-        state.position = [
-            base_pos,
-            arm_pos,
-            gripper_pos,
-            conveyor_pos,
+        command = [
+            "ros2",
+            "run",
+            "ros_gz_sim",
+            "create",
+            "-name",
+            name,
+            "-x",
+            str(self.spawn_x),
+            "-y",
+            str(self.spawn_y),
+            "-z",
+            str(self.spawn_z),
+            "-string",
+            sdf,
         ]
-        state.velocity = [
-            base_vel,
-            arm_vel,
-            gripper_vel,
-            conveyor_vel,
-        ]
-        self.joint_state_pub.publish(state)
-        self.physical_joint_state_pub.publish(state)
 
-        conveyor_msg = Float64()
-        conveyor_msg.data = conveyor_vel
-        self.conveyor_velocity_pub.publish(conveyor_msg)
-        self.physical_conveyor_velocity_pub.publish(conveyor_msg)
+        try:
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+        except subprocess.TimeoutExpired:
+            self.get_logger().error(
+                "Ball spawn timed out: {}".format(name)
+            )
+            return None
 
-        raw = String()
-        raw.data = line
-        self.raw_state_pub.publish(raw)
-        self.physical_raw_state_pub.publish(raw)
+        if result.returncode != 0:
+            self.get_logger().error(
+                "Ball spawn failed for {}: {}".format(
+                    name,
+                    result.stderr.strip(),
+                )
+            )
+            return None
 
-    def destroy_node(self) -> None:
-        self.shutdown_event.set()
-
-        for sock_obj in (self.client, self.server):
-            if sock_obj is not None:
-                try:
-                    sock_obj.close()
-                except OSError:
-                    pass
-
-        super().destroy_node()
+        self.get_logger().info(
+            "Spawned {} at ({:.4f}, {:.4f}, {:.4f})".format(
+                name,
+                self.spawn_x,
+                self.spawn_y,
+                self.spawn_z,
+            )
+        )
+        return name
 
 
 def main(args=None) -> None:
     rclpy.init(args=args)
-    node = Ev3StateBridge()
+    node = GazeboTwinInterface()
 
     try:
         rclpy.spin(node)
