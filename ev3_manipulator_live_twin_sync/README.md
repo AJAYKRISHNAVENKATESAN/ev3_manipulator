@@ -1,57 +1,55 @@
 # ev3_manipulator_live_twin_sync
 
-ROS 2 package that mirrors a physical LEGO Mindstorms EV3 brick's live
-encoder telemetry into a Gazebo digital twin — a pure mirror, with no stage
-handshake or sync barrier.
+ROS 2 package that coordinates a live **digital twin** between the physical
+LEGO Mindstorms EV3 brick and its Gazebo simulation. It builds on
+`ev3_manipulator_mirror_sync`'s continuous mirroring, adding a
+`twin_coordinator` node that independently checks the physical and
+simulated arms actually stay within tolerance of each other, instead of
+just assuming the mirror is accurate.
 
 ## Layout
-Same shape as `stage_sync`: URDF/xacro, meshes, Gazebo sim launch,
-`ros2_control`, dev `tools/`, and the `sorting_node` / `hardware_interface`
-nodes. Here, `hardware_interface` receives a continuous EV3 telemetry stream
-instead of a stage handshake, and `sorting_node` mirrors it straight into the
-sim with no synchronization barrier. `ev3_manipulator_live_twin_sync_firmware/`
-is its EV3-side counterpart — **not a ROS 2 package** (colcon-ignored).
+Same shape as `mirror_sync`: URDF/xacro, meshes, Gazebo sim launch,
+`ros2_control`, dev `tools/`, plus the `hardware_interface`, `sorting_node`
+(the `gazebo_twin_interface` in the diagram below) and `twin_coordinator`
+nodes. `ev3_manipulator_live_twin_sync_firmware/` is its EV3-side
+counterpart — **not a ROS 2 package** (colcon-ignored).
 
 ## Architecture
 ```mermaid
-flowchart LR
-    subgraph ROS 2
-        HI["hardware_interface<br/>(TCP telemetry bridge)"]
-        SN["sorting_node<br/>(Gazebo state mirror)"]
-    end
-    BRICK["EV3 brick<br/>ev3_manipulator_live_twin_sync_firmware/sorting.py<br/>(pybricks-micropython)"]
-    SIM["Gazebo sim<br/>(position controller +<br/>conveyor plugin)"]
+flowchart TB
+    TC["<b>TWIN COORDINATOR</b><br/>Physical ↔ Simulation<br/><br/>SYNCED<br/>OUT_OF_SYNC<br/>PHYSICAL_STALE<br/>SIM_STALE<br/>DISCONNECTED"]
 
-    BRICK -- "continuous encoder telemetry<br/>+ event notifications" --> HI
-    HI -- "/digital_twin/joint_states<br/>/digital_twin/events" --> SN
-    SN -- "continuous position commands" --> SIM
-    SN -- "spawn ball / start-stop conveyor<br/>on EV3 events" --> SIM
+    EV3["<b>Physical EV3</b><br/>Motors<br/>Encoders<br/>Touch sensors<br/>Color sensor"]
+    GZ["<b>Gazebo</b><br/>EV3 robot model<br/>ros2_control<br/>Physics<br/>Ball / conveyor"]
+
+    HI["<b>hardware_interface</b><br/>EV3 raw state<br/>↓<br/>canonical ROS state<br/><br/>motor deg → radians<br/>gearing<br/>offsets<br/>gripper mapping"]
+    GTI["<b>gazebo_twin_interface</b><br/>(sorting_node)<br/><br/>Consumes physical state<br/>↓<br/>Commands Gazebo<br/>↓<br/>Reads Gazebo state<br/>↓<br/>Publishes sim state"]
+
+    EV3 -- TCP --> HI
+    HI -- canonical state --> GTI
+    GTI -- position commands --> GZ
+    GZ -- sim state --> GTI
+    HI -- physical state --> TC
+    GTI -- simulated state --> TC
 ```
-Unlike `stage_sync`, there's no handshake or stage barrier: `hardware_interface`
-streams the brick's encoder positions/velocities to ROS as fast as they
-arrive, and `sorting_node` mirrors them straight into the sim's position
-controller every cycle. It only reacts *discretely* to two EV3-reported
-events — spawning a ball on ball-detected, and starting/stopping the
-simulated conveyor around a pickup action — everything else is continuous
-mirroring, not scripted stages.
 
-Unlike `stage_sync`'s staged handshake, there's really only one steady state —
-continuous mirroring — briefly interrupted by two discrete EV3-reported events:
+`hardware_interface` turns the EV3's raw motor/encoder readings (degrees,
+per-motor gearing, offsets, gripper-specific mapping) into canonical ROS
+joint state. That state goes two places: sideways into
+`gazebo_twin_interface`, which commands Gazebo and reads its state back,
+and directly up to `twin_coordinator` as the physical-side input.
+`gazebo_twin_interface` publishes the simulated state as the sim-side
+input to `twin_coordinator`.
 
-```mermaid
-stateDiagram-v2
-    [*] --> Idle
-    Idle --> Mirroring : brick connects
-    Mirroring --> Mirroring : continuous encoder telemetry
-    Mirroring --> SpawnBall : ball-detected event
-    SpawnBall --> Mirroring
-    Mirroring --> ConveyorRun : pickup event (start)
-    ConveyorRun --> Mirroring : pickup event (stop)
-```
+`twin_coordinator` continuously compares the two. If either side goes
+stale, the physical brick disconnects, or a joint drifts past its
+tolerance, it reports that explicitly — `SYNCED`, `OUT_OF_SYNC`,
+`PHYSICAL_STALE`, `SIM_STALE`, `DISCONNECTED` — on `/twin/state`,
+`/twin/synchronized`, and `/twin/status`, instead of silently assuming
+the twin stays accurate.
 
 ## Status
-**Telemetry mirroring.** Continuously mirrors EV3 encoder state into the sim
-and triggers ball spawn / conveyor start-stop from EV3-reported events.
-Exact spatial alignment at the pickup point still depends on calibrating the
-simulated conveyor's pickup timing against the EV3 action duration and belt
-geometry.
+**Phase 1: observation, not control.** `twin_coordinator` validates
+synchronization between the physical and simulated arms but doesn't yet
+arbitrate commands or drive MoveIt execution — see the module's own
+docstring for what Phase 2 adds.
